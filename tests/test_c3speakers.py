@@ -8,19 +8,30 @@ def test_helloworld():
     assert x == 'Hello, world!'
 
 
-# testing getting congress no.
+# test obtaining congress no.
+@pytest.fixture
+def err_wrongdate():
+    return ("ERROR: Value entered is not a valid year.\n"
+             "Only years between 1984 and the current year are allowed.")
+
+@pytest.fixture
+def err_notadate():
+    return "ERROR: Value entered is not a valid date."
+
+
 def test_congressno_1964():
     this_year = '1964'
     with pytest.raises(ValueError) as excinfo:
         congress_no(this_year)
     # assert 'Value entered is not a valid date.' in str(excinfo.value)
-    assert str(excinfo.value) == 'Value entered is not a valid date.'
+    assert str(excinfo.value) == err_wrongdate()
 
 
 def test_congressno_2023():
-    this_year = '2023'
-    this_congress = congress_no(this_year)
-    assert this_congress == (2023, '40C3')
+    this_year = '55555'
+    with pytest.raises(ValueError) as excinfo:
+        congress_no(this_year)
+    assert str(excinfo.value) == err_wrongdate()
 
 
 def test_congressno_2015():
@@ -39,28 +50,12 @@ def test_congressno_1983():
     this_year = '1983'
     with pytest.raises(ValueError) as excinfo:
         congress_no(this_year)
-    assert str(excinfo.value) == 'Value entered is not a valid date.'
+    assert str(excinfo.value) == err_wrongdate()
 
 
-# testing db connections
-@pytest.fixture
-def table():
-    return 'speakers'
+def test_congressno_blah():
+    this_year = 'blah'
+    with pytest.raises(SystemExit) as excinfo:
+        congress_no(this_year)
+    assert excinfo.value.code == 1
 
-
-def test_db_2015(table):
-    this_year = 2015
-    this_db = db_connect(table, this_year)
-    assert this_db == 'c3speakers2015.sqlite'
-
-
-def test_db_2040(table):
-    this_year = '2040'
-    this_db = db_connect(table, this_year)
-    assert this_db == 'c3speakers2040.sqlite'
-
-
-def test_db_1920(table):
-    this_year = 1920
-    this_db = db_connect(table, this_year)
-    assert this_db == 'c3speakers1920.sqlite'
