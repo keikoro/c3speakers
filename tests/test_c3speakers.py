@@ -47,18 +47,20 @@ def test_congressno_1983():
 def table():
     return 'speakers'
 
+
 def test_db_2015(table):
     this_year = 2015
     this_db = db_connect(table, this_year)
-    assert this_db == ('c3speakers2015.sqlite')
+    assert this_db == 'c3speakers2015.sqlite'
 
 
 def test_db_2040(table):
     this_year = '2040'
     this_db = db_connect(table, this_year)
-    assert this_db == ('c3speakers2040.sqlite')
+    assert this_db == 'c3speakers2040.sqlite'
+
 
 def test_db_1920(table):
     this_year = 1920
     this_db = db_connect(table, this_year)
-    assert this_db == ('c3speakers1920.sqlite')
+    assert this_db == 'c3speakers1920.sqlite'
