@@ -2,7 +2,6 @@ import sqlite3 as lite
 from datetime import date
 from urllib.error import *
 from urllib.request import urlopen
-
 from c3urls import *
 
 
@@ -41,6 +40,7 @@ def congress_no(year=date.today().year):
 
 def db_connect(table, year=date.today().year):
     """Create / connect to SQLite database.
+    :param table: name of the table for speakers' data
     :param year: year YYYY
     """
     db_name = 'c3speakers' + str(year) + '.sqlite'
@@ -51,7 +51,7 @@ def db_connect(table, year=date.today().year):
         cur = db.cursor()
         cur.execute("""CREATE TABLE IF NOT EXISTS
                     %s(id INTEGER PRIMARY KEY, name TEXT, twitter TEXT)
-                    """  % table)
+                    """ % table)
         cur.execute("SELECT Count(*) FROM %s" % table)
         rows = cur.fetchone()
         print("Table rows: %s" % rows)
@@ -71,23 +71,29 @@ def get_speakers(html):
     pass
 
 
+def main(argv=None):
+    # table into which to save speakers data
+    global congress_data
+    table = 'speakers'
 
-table = 'speakers'
+    # test function
+    print(hello_world())
 
-# test function
-print(hello_world())
+    # get congress data (year, c3 shortcut)
+    try:
+        congress_data = congress_no()
+        print(congress_data)
+    except ValueError as err:
+        print(err.args[0])
 
-# get congress data
-try:
-    congress_data = congress_no()
-    print(congress_data)
-except ValueError as err:
-    print(err.args[0])
+    # connect to/create db and create first table
+    try:
+        table_data = db_connect(table, congress_data[0])
+        print(table_data)
+    except NameError as err:
+        print(err.args[0])
+        print("Cannot create DB, no congress no. specified.")
 
-# connect to/create db and create first table
-try:
-    table_data = db_connect(table, congress_data[0])
-    print(table_data)
-    db = table_data[0]
-except NameError as err:
-    print("Cannot create DB, no congress no. specified.")
+
+if __name__ == "__main__":
+    main()
