@@ -65,9 +65,9 @@ def db_write(db_name):
     try:
         cur = db.cursor()
         # create table for speakers
-        cur.execute("""
-            CREATE TABLE speakers(id INTEGER PRIMARY KEY, name TEXT, twitter TEXT)
-        """)
+        cur.execute("""CREATE TABLE IF NOT EXISTS
+                        speakers(id INTEGER PRIMARY KEY, name TEXT, twitter TEXT)
+                    """)
         db.commit()
     except lite.OperationalError as err:
         # rollback on problems with db statement
