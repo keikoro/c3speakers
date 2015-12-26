@@ -21,16 +21,15 @@ def read_html():
         print(err)
         return
     get_speakers(html)
-    return
 
 
-def congress_no(get_year=date.today().year):
+def congress_no(year=date.today().year):
     """Return current year and congress shortcut.
-    :param get_year: year YYYY
+    :param year: year YYYY
     """
     c3 = 'C3'
     first = 1984
-    this_year = int(get_year)
+    this_year = int(year)
 
     if this_year >= 1984:
         c3_no = this_year - first + 1
@@ -40,19 +39,18 @@ def congress_no(get_year=date.today().year):
         raise ValueError("Value entered is not a valid date.")
 
 
-def db_connect(year=date.today().year):
+def db_connect(table, year=date.today().year):
     """Create / connect to SQLite database.
-    :param year:
+    :param year: year YYYY
     """
     db_name = 'c3speakers' + str(year) + '.sqlite'
-    table = 'speakers'
 
     # create table for speakers
     try:
         db = lite.connect(db_name)
         cur = db.cursor()
         cur.execute("""CREATE TABLE IF NOT EXISTS
-                        %s(id INTEGER PRIMARY KEY, name TEXT, twitter TEXT)
+                    %s(id INTEGER PRIMARY KEY, name TEXT, twitter TEXT)
                     """  % table)
         cur.execute("SELECT Count(*) FROM %s" % table)
         rows = cur.fetchone()
@@ -66,23 +64,30 @@ def db_connect(year=date.today().year):
     finally:
         db.close()
 
-    return rows
+    return db_name
 
 
 def get_speakers(html):
     pass
 
 
+
+table = 'speakers'
+
+# test function
 print(hello_world())
 
+# get congress data
 try:
     congress_data = congress_no()
+    print(congress_data)
 except ValueError as err:
     print(err.args[0])
 
+# connect to/create db and create first table
 try:
-    # noinspection PyUnboundLocalVariable
-    table_rows = db_connect(congress_data[0])
-    print(table_rows[0])
+    table_data = db_connect(table, congress_data[0])
+    print(table_data)
+    db = table_data[0]
 except NameError as err:
     print("Cannot create DB, no congress no. specified.")
