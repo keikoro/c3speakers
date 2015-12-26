@@ -58,4 +58,3 @@ def test_congressno_blah():
     with pytest.raises(SystemExit) as excinfo:
         congress_no(this_year)
     assert excinfo.value.code == 1
-
