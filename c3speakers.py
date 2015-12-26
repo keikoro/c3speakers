@@ -1,8 +1,8 @@
 from urllib.request import urlopen
 from urllib.error import *
 from c3urls import *
-from dateutil.parser import parse
 from datetime import date
+import sqlite3 as lite
 
 
 def hello_world():
@@ -37,6 +37,20 @@ def congress_no(get_year=date.today().year):
         raise ValueError("Value entered is not a valid date.")
 
 
+def db_connect(year=date.today().year):
+    """Create / connect to SQLite database."""
+    db_name = 'c3speakers' + str(year) + '.db'
+    db = lite.connect(db_name)
+
+    # get SQLite version
+    cur = db.cursor()
+    cur.execute('SELECT SQLITE_VERSION()')
+    data = cur.fetchone()
+    print("SQLite version: %s" % data)
+
+    return db_name
+
+
 def get_speakers(html):
     pass
 
@@ -45,6 +59,13 @@ print(hello_world())
 print(read_html())
 
 try:
-    print(congress_no())
+    congress_data = congress_no()
 except ValueError as err:
     print(err.args[0])
+
+try:
+    db_name = db_connect(congress_data[0])
+    print(db_name)
+except NameError as err:
+    print("Cannot create DB, no congress specified.")
+    raise err
