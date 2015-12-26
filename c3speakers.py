@@ -45,36 +45,28 @@ def db_connect(year=date.today().year):
     :param year:
     """
     db_name = 'c3speakers' + str(year) + '.sqlite'
-    db = lite.connect(db_name)
+    table = 'speakers'
 
-    # get SQLite version
-    cur = db.cursor()
-    cur.execute('SELECT SQLITE_VERSION()')
-    data = cur.fetchone()
-    print("SQLite version: %s" % data)
-
-    return db_name
-
-
-def db_write(db_name):
-    """Update SQLite database.
-    :param db_name: name of the DB to operate on
-    """
-    db = lite.connect(db_name)
-
+    # create table for speakers
     try:
+        db = lite.connect(db_name)
         cur = db.cursor()
-        # create table for speakers
         cur.execute("""CREATE TABLE IF NOT EXISTS
-                        speakers(id INTEGER PRIMARY KEY, name TEXT, twitter TEXT)
-                    """)
+                        %s(id INTEGER PRIMARY KEY, name TEXT, twitter TEXT)
+                    """  % table)
+        cur.execute("SELECT Count(*) FROM %s" % table)
+        rows = cur.fetchone()
+        print("Table rows: %s" % rows)
         db.commit()
     except lite.OperationalError as err:
         # rollback on problems with db statement
         print(str(err))
+        raise err
         db.rollback()
     finally:
         db.close()
+
+    return rows
 
 
 def get_speakers(html):
@@ -82,7 +74,6 @@ def get_speakers(html):
 
 
 print(hello_world())
-print(read_html())
 
 try:
     congress_data = congress_no()
@@ -91,13 +82,7 @@ except ValueError as err:
 
 try:
     # noinspection PyUnboundLocalVariable
-    db_file = db_connect(congress_data[0])
-    print(db_file)
+    table_rows = db_connect(congress_data[0])
+    print(table_rows[0])
 except NameError as err:
-    print("Cannot create DB, no congress specified.")
-
-try:
-    # noinspection PyUnboundLocalVariable
-    print(db_write(db_file))
-except NameError as err:
-    print("Database with the provided name does not exist.")
+    print("Cannot create DB, no congress no. specified.")
