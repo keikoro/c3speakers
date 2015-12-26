@@ -27,6 +27,9 @@ def congress_no(year, this_year=date.today().year):
 
     try:
         year = int(year)
+
+    # TODO
+    # allow c3 shortcuts to be entered instead of years, e.g. 30C3
     except ValueError as err:
         print("ERROR: Value entered is not a valid date.")
         print(err)
@@ -41,6 +44,19 @@ def congress_no(year, this_year=date.today().year):
         raise ValueError("ERROR: Value entered is not a valid year.\n"
                          "Only years between 1984 and the current year are allowed.")
 
+
+def open_speakers_file(year):
+    """Open the file/website listing all C3 speakers for a given year.
+    :param year: the year for which to get the speakers file
+
+    URL: https://events.ccc.de/congress/YYYY/Fahrplan/speakers/
+    """
+
+    url = "https://events.ccc.de/congress/" + str(year) + "/Fahrplan/speakers/"
+
+    if(offline):
+        url = offline
+    return url
 
 def main():
     table = 'speakers'
@@ -67,6 +83,14 @@ def main():
     try:
         congress_data = congress_no(year)
         print(congress_data)
+    except ValueError as err:
+        print(err)
+        sys.exit(1)
+
+    # open speakers file/website
+    try:
+        get_speakers = open_speakers_file(year)
+        print(get_speakers)
     except ValueError as err:
         print(err)
 
