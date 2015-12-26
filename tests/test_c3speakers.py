@@ -12,7 +12,8 @@ def test_helloworld():
 @pytest.fixture
 def err_wrongdate():
     return ("ERROR: Value entered is not a valid year.\n"
-             "Only years between 1984 and the current year are allowed.")
+            "Only years between 1984 and the current year are allowed.")
+
 
 @pytest.fixture
 def err_notadate():

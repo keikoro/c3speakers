@@ -1,4 +1,5 @@
-import sys, getopt
+import sys
+import getopt
 import sqlite3 as lite
 from datetime import date
 from urllib.error import *
@@ -36,7 +37,7 @@ def congress_no(year, this_year=date.today().year):
         sys.exit(1)
 
     # only allow congresses between the very first congresses and now
-    if year >= 1984 and year <= this_year:
+    if 1984 <= year <= this_year:
         c3_no = year - first + 1
         c3_id = str(c3_no) + c3
         return year, c3_id
@@ -54,7 +55,7 @@ def open_speakers_file(year):
 
     url = "https://events.ccc.de/congress/" + str(year) + "/Fahrplan/speakers/"
 
-    if(offline):
+    if offline:
         url = offline
     return url
 
