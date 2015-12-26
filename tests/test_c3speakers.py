@@ -39,3 +39,21 @@ def test_congressno_1983():
     with pytest.raises(ValueError) as excinfo:
         congress_no(this_year)
     assert str(excinfo.value) == 'Value entered is not a valid date.'
+
+
+def test_db_2015():
+    this_year = 2015
+    this_db = db_connect(this_year)
+    assert this_db == 'c3speakers2015.db'
+
+
+def test_db_2040():
+    this_year = '2040'
+    this_db = db_connect(this_year)
+    assert this_db == 'c3speakers2040.db'
+
+
+def test_db_1920():
+    this_year = 1920
+    this_db = db_connect(this_year)
+    assert this_db == 'c3speakers1920.db'
