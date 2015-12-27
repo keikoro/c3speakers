@@ -48,22 +48,15 @@ def congress_no(year, this_year=date.today().year):
                          "Only years between 1984 and the current year are allowed.")
 
 
-def open_speakers_file(year):
+def open_speakers_file(url):
     """Open the file/website listing all C3 speakers for a given year.
-    :param year: the year for which to get the speakers file
+    :param url: website address of C3 Fahrplan speakers info
 
-    URLs:   https://events.ccc.de/congress/2015/Fahrplan/speakers.html
-            https://events.ccc.de/congress/2012/Fahrplan/speakers.en.html
-            https://events.ccc.de/congress/2010/Fahrplan/speakers.de.html
-
+    previous URLs e.g.:
+    https://events.ccc.de/congress/2015/Fahrplan/speakers.html
+    https://events.ccc.de/congress/2012/Fahrplan/speakers.en.html
+    https://events.ccc.de/congress/2010/Fahrplan/speakers.de.html
     """
-
-    urls = ("https://events.ccc.de/congress/" + str(year) + "/Fahrplan/speakers.html",
-            "https://events.ccc.de/congress/" + str(year) + "/Fahrplan/speakers.en.html"
-            )
-
-    if offline:
-        url = "file:///" + offline
 
     try:
         r = requests.get(url, verify=False, timeout=5)
@@ -87,7 +80,7 @@ def open_speakers_file(year):
             except Exception as err:
                 return "ERROR: Not a valid file."
 
-    return url
+    return True
 
 def main():
     table = 'speakers'
@@ -118,12 +111,32 @@ def main():
         print(err)
         sys.exit(1)
 
+
+    # possible speaker URLs
+    # based on previous congresses
+    urls = ("https://events.ccc.de/congress/" + str(year) + "/Fahrplan/speakers.html",
+            "https://events.ccc.de/congress/" + str(year) + "/Fahrplan/speakers.en.html"
+            )
+
+    # test urls (on and offline)
+    urls = (testurl_offnon,
+            testurl_on404,
+            testurl_offtrue,
+            testurl_ontrue,
+            testurl_offnon2
+            )
+
     # open speakers file/website
-    try:
-        get_speakers = open_speakers_file(year)
-        print(get_speakers)
-    except ValueError as err:
-        print(err)
+    for url in urls:
+        print(url)
+
+        try:
+            check_url = open_speakers_file(url)
+            print(check_url)
+            if open_speakers_file(url) == True:
+                break
+        except ValueError as err:
+            print(err)
 
 
 if __name__ == "__main__":
