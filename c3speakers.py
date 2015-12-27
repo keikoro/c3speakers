@@ -1,9 +1,11 @@
 import sys
 import getopt
+import requests
+from urllib.request import urlopen
+from urllib.error import *
 import sqlite3 as lite
 from datetime import date
-from urllib.error import *
-from urllib.request import urlopen
+from bs4 import BeautifulSoup, SoupStrainer
 from c3urls import *
 
 
@@ -50,13 +52,41 @@ def open_speakers_file(year):
     """Open the file/website listing all C3 speakers for a given year.
     :param year: the year for which to get the speakers file
 
-    URL: https://events.ccc.de/congress/YYYY/Fahrplan/speakers/
+    URLs:   https://events.ccc.de/congress/2015/Fahrplan/speakers.html
+            https://events.ccc.de/congress/2012/Fahrplan/speakers.en.html
+            https://events.ccc.de/congress/2010/Fahrplan/speakers.de.html
+
     """
 
-    url = "https://events.ccc.de/congress/" + str(year) + "/Fahrplan/speakers/"
+    urls = ("https://events.ccc.de/congress/" + str(year) + "/Fahrplan/speakers.html",
+            "https://events.ccc.de/congress/" + str(year) + "/Fahrplan/speakers.en.html"
+            )
 
     if offline:
-        url = offline
+        url = "file:///" + offline
+
+    try:
+        r = requests.get(url, verify=False, timeout=5)
+        if not r.status_code // 100 == 2:
+            if r.status_code == 404:
+                return "404 – page not found"
+            return "ERROR: Unexpected response %s" % r
+        html = r.text
+    # connection timeout
+    except requests.exceptions.ConnectTimeout as err:
+        return "ERROR: The connection timed out."
+    # ambiguous exceptions
+    except requests.exceptions.RequestException as err:
+        if "No connection adapters were found for" not in str(err):
+            return ("ERROR: Invalid request.\n"
+                "%s" % str(err))
+        # offline use – try opening file with urllib
+        else:
+            try:
+                html = urlopen(url)
+            except Exception as err:
+                return "ERROR: Not a valid file."
+
     return url
 
 def main():
