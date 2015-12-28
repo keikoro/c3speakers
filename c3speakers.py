@@ -1,6 +1,7 @@
 import sys
 import getopt
 import requests
+import re
 from urllib.request import urlopen
 from urllib.error import *
 import sqlite3 as lite
@@ -80,7 +81,20 @@ def open_speakers_file(url):
             except Exception as err:
                 return "ERROR: Not a valid file."
 
-    return True
+    return True, html
+
+
+def find_speakers(html):
+    """
+    Find URLs to speakers pages in speakers.html
+    """
+    # only look for URLs with '/speakers/' in them
+    parse_links = SoupStrainer('a')
+    filter_links = re.compile("(/speakers/)")
+    soup = BeautifulSoup(html, 'html.parser', parse_only=parse_links)
+    for item in soup.find_all('a', href=filter_links):
+        print(item)
+
 
 def main():
     table = 'speakers'
@@ -128,12 +142,16 @@ def main():
 
     # open speakers file/website
     for url in urls:
-        print(url)
+        # print(url)
 
         try:
             check_url = open_speakers_file(url)
-            print(check_url)
-            if open_speakers_file(url) == True:
+            status = check_url[0]
+            html_obj = check_url[1]
+            if status == True:
+                print(url)
+                print(html_obj)
+                find_speakers(html_obj)
                 break
         except ValueError as err:
             print(err)
