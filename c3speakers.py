@@ -3,8 +3,6 @@ import getopt
 import requests
 import re
 from urllib.request import urlopen
-from urllib.error import *
-import sqlite3 as lite
 from datetime import date
 from bs4 import BeautifulSoup, SoupStrainer
 from c3urls import *
@@ -73,7 +71,7 @@ def open_speakers_file(url):
     except requests.exceptions.RequestException as err:
         if "No connection adapters were found for" not in str(err):
             return ("ERROR: Invalid request.\n"
-                "%s" % str(err))
+                    "%s" % str(err))
         # offline use – try opening file with urllib
         else:
             try:
@@ -87,13 +85,25 @@ def open_speakers_file(url):
 def find_speakers(html):
     """
     Find URLs to speakers pages in speakers.html
+    :param html: the html object to parse with Beautiful Soup
     """
-    # only look for URLs with '/speakers/' in them
+
+    # only look for URLs
+    # which contain '/speakers/'
+    # and which contain no other tags
     parse_links = SoupStrainer('a')
     filter_links = re.compile("(/speakers/)")
+    filter_contents = re.compile(".*")
     soup = BeautifulSoup(html, 'html.parser', parse_only=parse_links)
-    for item in soup.find_all('a', href=filter_links):
-        print(item)
+
+    # print out all valid URLs
+    for item in soup.find_all('a', href=filter_links, string=filter_contents):
+        # filter_id = re.compile("/speakers/([0-9]+).html")
+        regex = ".+/speakers/([0-9]+).html"
+        href = item['href']
+        speaker_id = re.match(regex, href).group(1)
+        value = item.get_text()
+        print(str(speaker_id) + " - " + value)
 
 
 def main():
@@ -125,12 +135,14 @@ def main():
         print(err)
         sys.exit(1)
 
-
     # possible speaker URLs
     # based on previous congresses
-    urls = ("https://events.ccc.de/congress/" + str(year) + "/Fahrplan/speakers.html",
-            "https://events.ccc.de/congress/" + str(year) + "/Fahrplan/speakers.en.html"
-            )
+    urls = (
+        "https://events.ccc.de/congress/" + str(
+            year) + "/Fahrplan/speakers.html",
+        "https://events.ccc.de/congress/" + str(
+            year) + "/Fahrplan/speakers.en.html"
+    )
 
     # test urls (on and offline)
     urls = (testurl_offnon,
@@ -140,17 +152,15 @@ def main():
             testurl_offnon2
             )
 
-    # open speakers file/website
+    # loop through possible URLs for speakers site
     for url in urls:
-        # print(url)
-
         try:
+            # try to open speakers file/website
             check_url = open_speakers_file(url)
             status = check_url[0]
             html_obj = check_url[1]
-            if status == True:
+            if status is True:
                 print(url)
-                print(html_obj)
                 find_speakers(html_obj)
                 break
         except ValueError as err:
