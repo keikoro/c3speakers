@@ -76,13 +76,13 @@ def test_url_online_404():
 def test_url_offline_valid():
     this_url = testurl_offtrue
     this_check = open_speakers_file(this_url)
-    assert this_check is True
+    assert this_check[0] is True
 
 
 def test_url_online_valid():
     this_url = testurl_ontrue
     this_check = open_speakers_file(this_url)
-    assert this_check is True
+    assert this_check[0] is True
 
 
 def test_url_online_invalid():
