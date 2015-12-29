@@ -76,16 +76,16 @@ def test_url_online_404():
 def test_url_offline_valid():
     this_url = testurl_offtrue
     this_check = open_speakers_file(this_url)
-    assert this_check == True
+    assert this_check is True
 
 
 def test_url_online_valid():
     this_url = testurl_ontrue
     this_check = open_speakers_file(this_url)
-    assert this_check == True
+    assert this_check is True
 
 
-def test_url_online_valid():
+def test_url_online_invalid():
     this_url = testurl_offnon2
     this_check = open_speakers_file(this_url)
     assert this_check == "ERROR: Not a valid file."
