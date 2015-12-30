@@ -15,7 +15,7 @@ def hello_world():
 
 
 def usage():
-    howto = "Usage: python3 %s -y YEAR" % str(sys.argv[0])
+    howto = "Usage: python3 %s -y YEAR -u URL" % str(sys.argv[0])
     return howto
 
 
@@ -82,11 +82,12 @@ def open_speakers_file(url):
     return True, html
 
 
-def find_speakers(html):
+def find_speakers(html_obj):
     """
     Find URLs to speakers pages in speakers.html
     :param html: the html object to parse with Beautiful Soup
     """
+    speakers = {}
 
     # only look for URLs
     # which contain '/speakers/'
@@ -94,24 +95,48 @@ def find_speakers(html):
     parse_links = SoupStrainer('a')
     filter_links = re.compile("(/speakers/)")
     filter_contents = re.compile(".*")
-    soup = BeautifulSoup(html, 'html.parser', parse_only=parse_links)
+    soup = BeautifulSoup(html_obj, 'html.parser', parse_only=parse_links)
 
     # print out all valid URLs
     for item in soup.find_all('a', href=filter_links, string=filter_contents):
-        # filter_id = re.compile("/speakers/([0-9]+).html")
         regex = ".+/speakers/([0-9]+).html"
         href = item['href']
         speaker_id = re.match(regex, href).group(1)
         value = item.get_text()
-        print(href)
-        print(str(speaker_id) + " - " + value)
+        # debug
+        print(str(speaker_id) + ": " + value)
+        speakers[speaker_id] = value
+    return speakers
 
 
-def parse_speaker_profile(id):
+def parse_speaker_profile(url):
     """
-    """
-    pass
+    :param url: url to an individual speaker profile
 
+    Typical speaker URLs:
+    https://events.ccc.de/congress/2015/Fahrplan/speakers/6238.html
+    https://events.ccc.de/congress/2009/Fahrplan/speakers/2650.en.html
+    https://events.ccc.de/congress/2012/Fahrplan/speakers/3943.de.html
+    """
+
+    # try to open speaker's profile page/file
+    check_url = open_speakers_file(url)
+    status = check_url[0]
+    html_obj = check_url[1]
+    if status is True:
+        # look for Twitter links
+        parse_links = SoupStrainer('a')
+        filter_links = re.compile("(twitter.com)")
+        soup = BeautifulSoup(html_obj, 'html.parser', parse_only=parse_links)
+
+        # print out all valid URLs
+        for twitter_account in soup.find_all('a', href=filter_links):
+            regex = ".+/twitter.com/([@_A-Za-z0-9]+)"
+            href = twitter_account['href']
+            speaker_twitter = re.match(regex, href).group(1)
+            value = twitter_account.get_text()
+            # debug
+            print(str(speaker_twitter))
 
 
 def main():
@@ -119,7 +144,7 @@ def main():
     year = date.today().year
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 'y:h', ['year=', 'help'])
+        opts, args = getopt.getopt(sys.argv[1:], 'yu:h', ['year=', 'url=', 'help'])
     except getopt.GetoptError as err:
         print(usage())
         print(err)
@@ -130,6 +155,8 @@ def main():
             print(usage())
         elif opt in ('-y', '--year'):
             year = arg
+        elif opt in ('-u', '--url'):
+            url = arg
 
     # test function
     print(hello_world())
@@ -173,10 +200,24 @@ def main():
             html_obj = check_url[1]
             if status is True:
                 print(url)
-                find_speakers(html_obj)
+                try:
+                    # fetch speaker IDs from valid URL
+                    speakers = find_speakers(html_obj)
+                    print("---")
+                    # display the no. of speakers that was found
+                    if len(speakers) > 0:
+                        print(len(speakers), "speakers, all in all")
+                    else:
+                        print("No speakers found.")
+                except Exception as err:
+                    print("ERROR: No speakers found.")
+                    sys.exit(1)
                 break
         except ValueError as err:
+            print("ERROR: Value entered is not a valid URL.")
             print(err)
+
+    parse_speaker_profile(speaker_test_1)
 
 
 if __name__ == "__main__":
