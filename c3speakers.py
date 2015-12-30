@@ -103,7 +103,15 @@ def find_speakers(html):
         href = item['href']
         speaker_id = re.match(regex, href).group(1)
         value = item.get_text()
+        print(href)
         print(str(speaker_id) + " - " + value)
+
+
+def parse_speaker_profile(id):
+    """
+    """
+    pass
+
 
 
 def main():
@@ -137,6 +145,10 @@ def main():
 
     # possible speaker URLs
     # based on previous congresses
+
+    # TODO
+    # let user input alternative URLs
+    # (for Fahrplan mirrors)
     urls = (
         "https://events.ccc.de/congress/" + str(
             year) + "/Fahrplan/speakers.html",
