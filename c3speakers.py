@@ -184,7 +184,9 @@ def main():
     )
 
     # test urls (on and offline)
-    urls = (testurl_offnon,
+    urls = (
+            headertest,
+            testurl_offnon,
             testurl_on404,
             testurl_offtrue,
             testurl_ontrue,
