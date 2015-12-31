@@ -48,6 +48,13 @@ def congress_no(year, this_year=date.today().year):
                          "Only years between 1984 and the current year are allowed.")
 
 
+def headers():
+    """
+    Custom headers for http(s) request.
+    """
+    pass
+
+
 def open_speakers_file(url):
     """Open the file/website listing all C3 speakers for a given year.
     :param url: website address of C3 Fahrplan speakers info
@@ -185,7 +192,7 @@ def main():
 
     # test urls (on and offline)
     urls = (
-            headertest,
+            # headertest,
             testurl_offnon,
             testurl_on404,
             testurl_offtrue,
@@ -195,6 +202,7 @@ def main():
 
     # loop through possible URLs for speakers site
     for url in urls:
+        print(url)
         try:
             # try to open speakers file/website
             check_url = open_speakers_file(url)
@@ -219,8 +227,6 @@ def main():
             print("ERROR: Value entered is not a valid URL.")
             print(err)
 
-
-
     speakers = (speaker_test_1,
                speaker_test_2
                )
@@ -230,8 +236,6 @@ def main():
         # time delay to appear less bot-like
         time.sleep(2)
         parse_speaker_profile(speaker)
-
-
 
 
 if __name__ == "__main__":
