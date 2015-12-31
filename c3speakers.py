@@ -2,6 +2,7 @@ import sys
 import getopt
 import requests
 import re
+import time
 from urllib.request import urlopen
 from datetime import date
 from bs4 import BeautifulSoup, SoupStrainer
@@ -157,7 +158,6 @@ def main():
             year = arg
         elif opt in ('-u', '--url'):
             url = arg
-
     # test function
     print(hello_world())
 
@@ -217,7 +217,19 @@ def main():
             print("ERROR: Value entered is not a valid URL.")
             print(err)
 
-    parse_speaker_profile(speaker_test_1)
+
+
+    speakers = (speaker_test_1,
+               speaker_test_2
+               )
+
+    # parse speakers profiles
+    for speaker in speakers:
+        # time delay to appear less bot-like
+        time.sleep(2)
+        parse_speaker_profile(speaker)
+
+
 
 
 if __name__ == "__main__":
