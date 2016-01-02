@@ -17,20 +17,23 @@ def hello_world():
 
 
 def usage():
-    howto = "Usage: python3 %s -y YEAR -u URL" % str(sys.argv[0])
+    howto = ("Usage: python3 %s "
+             "[-y] <year> "
+             "[-u] <url> "
+             "[-c] <xxC3>" % str(sys.argv[0]))
     return howto
 
 
-def congress_no(year, this_year=date.today().year):
+def congress_no(c3_year, this_year=date.today().year):
     """Return year and congress shortcut.
-    :param year: year of queried congress
-    :param this_year: this year
+    :param c3_year: year of queried congress
+    :param this_year: current year
     """
     c3 = 'C3'
     first = 1984
 
     try:
-        year = int(year)
+        year = int(c3_year)
 
     # TODO
     # allow c3 shortcuts to be entered instead of years, e.g. 30C3
@@ -158,7 +161,7 @@ def parse_speaker_profile(url):
             print(str(speaker_twitter))
 
 
-def db_connect(table, year):
+def db_connect(table, c3_year):
     """Create / connect to SQLite database.
     :param table: name of the table for speakers' data
     :param year: year YYYY
@@ -228,6 +231,7 @@ def main():
     for opt, arg in opts:
         if opt in ('-h', '--help'):
             print(usage())
+            sys.exit(1)
         elif opt in ('-y', '--year'):
             year = arg
         elif opt in ('-u', '--url'):
@@ -238,11 +242,11 @@ def main():
     # get congress data:
     # year of congress + c3 shortcut
     try:
-        congress_data = congress_no(year)
-        congress_year = congress_data[0]
-        congress_shortcut = congress_data[1]
-        print(congress_year)
-        print(congress_shortcut)
+        c3_data = congress_no(year)
+        c3_year = c3_data[0]
+        c3_shortcut = c3_data[1]
+        print(c3_year)
+        print(c3_shortcut)
     except ValueError as err:
         print(err)
         sys.exit(1)
@@ -272,7 +276,6 @@ def main():
 
     # loop through possible URLs for speakers site
     for url in urls:
-        print(url)
         try:
             # try to open speakers file/website
             check_url = open_website(url)
@@ -286,17 +289,19 @@ def main():
                     print("---")
                     # display the no. of speakers that was found
                     if len(speakers) > 0:
-                        db_name = db_connect(table, congress_year)
-                        db_write(congress_shortcut, db_name, speakers)
-                        print("dsfdf")
+                        db_name = db_connect(table, c3_year)
+                        db_write(c3_shortcut, db_name, speakers)
+                        print("Speakers:")
                         print(len(speakers), "speakers, all in all")
                     else:
                         print("No speakers found.")
                 except Exception as err:
                     print("ERROR: No speakers found.")
-                    raise(err)
                     sys.exit(1)
                 break
+            else:
+                print("ERROR: Value entered is not a valid URL:\n"
+                        + str(url) + "\n")
         except ValueError as err:
             print("ERROR: Value entered is not a valid URL.")
             print(err)
