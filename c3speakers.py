@@ -18,10 +18,10 @@ def hello_world():
 
 
 def usage():
-    howto = ("Usage: python3 %s "
+    howto = ("Usage: python3 {} "
              "[-y] <year> "
              "[-u] <url> "
-             "[-c] <xxC3>" % str(sys.argv[0]))
+             "[-c] <xxC3>".format(sys.argv[0]))
     return howto
 
 
@@ -45,7 +45,7 @@ def congress_no(c3_year, this_year=date.today().year):
     # only allow congresses between the very first congresses and now
     if 1984 <= year <= this_year:
         c3_no = year - first + 1
-        c3_id = str(c3_no) + c3
+        c3_id = "{}{}".format(c3_no, c3)
         return year, c3_id
     else:
         raise ValueError("ERROR: Value entered is not a valid year.\n"
@@ -84,7 +84,7 @@ def open_website(url):
         if not r.status_code // 100 == 2:
             if r.status_code == 404:
                 return "404 – page not found"
-            return "ERROR: Unexpected response %s" % r
+            return "ERROR: Unexpected response {}".format(r)
         html = r.text
     # connection timeout
     except requests.exceptions.ConnectTimeout:
@@ -92,8 +92,7 @@ def open_website(url):
     # ambiguous exceptions
     except requests.exceptions.RequestException as err:
         if "No connection adapters were found for" not in str(err):
-            return ("ERROR: Invalid request.\n"
-                    "%s" % str(err))
+            return ("ERROR: Invalid request.\n{}".format(err))
         # offline use – try opening file with urllib
         else:
             # noinspection PyBroadException,PyBroadException
@@ -127,7 +126,7 @@ def find_speakers(html_obj):
         speaker_id = re.match(regex, href).group(1)
         value = item.get_text()
         # debug
-        # print(str(speaker_id) + ": " + value)
+        # print("{} : {}".format(speaker_id, value))
         speakers[speaker_id] = value
 
     return speakers
@@ -168,7 +167,7 @@ def db_connect(base_path, table, year):
     :param table: name of the table for speakers' data
     :param year: year YYYY
     """
-    db_name = 'c3speakers' + str(year) + '.sqlite'
+    db_name = "c3speakers{}.sqlite".format(year)
 
     try:
         db = sqlite3.connect(base_path + db_name)
@@ -179,10 +178,10 @@ def db_connect(base_path, table, year):
     # create table for speakers
     try:
         cur = db.cursor()
-        cur.execute("""CREATE TABLE IF NOT EXISTS
-                    %s(id INTEGER PRIMARY KEY, name TEXT, twitter TEXT)
-                    """ % table)
-        cur.execute("SELECT Count(*) FROM %s" % table)
+        cur.execute("CREATE TABLE IF NOT EXISTS {} "
+                    "(id INTEGER PRIMARY KEY, name TEXT, twitter TEXT)"
+                    .format(table))
+        cur.execute("SELECT Count(*) FROM {}".format(table))
         db.commit()
     except sqlite3.OperationalError as err:
         # rollback on problems with db statement
@@ -214,12 +213,12 @@ def db_write(base_path, db_name, table, speakers):
         for speaker_id, speaker_name in speakers.items():
             cur.execute("INSERT INTO speakers (id, name) "
                         "SELECT ?, ? WHERE NOT EXISTS "
-                        "(SELECT * FROM " + table + " WHERE id = ?)",
+                        "(SELECT * FROM {} WHERE id = ?)".format(table),
                         (int(speaker_id), speaker_name, int(speaker_id)))
-        cur.execute("SELECT Count(*) FROM " + table)
+        cur.execute("SELECT Count(*) FROM {}".format(table))
         rows = cur.fetchone()
         db.commit()
-        print("Table rows: %s" % rows)
+        print("Table rows: {}".format(rows[0]))
     except sqlite3.OperationalError as err:
         # rollback on problems with db statement
         print(str(err))
@@ -262,8 +261,7 @@ def main():
         c3_data = congress_no(year)
         c3_year = c3_data[0]
         c3_shortcut = c3_data[1]
-        print(c3_year)
-        print(c3_shortcut)
+        print("{} : {}".format(c3_year, c3_shortcut))
     except ValueError as err:
         print(err)
         sys.exit(1)
@@ -273,10 +271,8 @@ def main():
 
     # TODO let user input alternative URLs (for Fahrplan mirrors)
     urls = (
-        "https://events.ccc.de/congress/" + str(
-            year) + "/Fahrplan/speakers.html",
-        "https://events.ccc.de/congress/" + str(
-            year) + "/Fahrplan/speakers.en.html"
+        "https://events.ccc.de/congress/{}/Fahrplan/speakers.html".format(year),
+        "https://events.ccc.de/congress/{}/Fahrplan/speakers.en.html".format(year)
     )
 
     # test urls (on and offline)
@@ -297,12 +293,10 @@ def main():
             status = check_url[0]
             html_obj = check_url[1]
             if status is True:
-                print("status true")
                 print(url)
                 try:
                     # fetch speaker IDs from valid URL
                     speakers = find_speakers(html_obj)
-                    print("---")
                 except Exception as err:
                     print("ERROR: Cannot fetch speakers from file.")
                     # TODO remove raise
@@ -311,8 +305,7 @@ def main():
                     sys.exit(1)
                 break
             else:
-                print("ERROR: Value entered is not a valid URL:\n" +
-                      str(url) + "\n")
+                print("ERROR: Value entered is not a valid URL:\n{}".format(url))
         except ValueError as err:
             print("ERROR: Value entered is not a valid URL.")
             print(err)
@@ -327,9 +320,9 @@ def main():
     }
 
     # display the no. of speakers that was found
+    print("---")
     if len(speakers) > 0:
-        print("Speakers:")
-        print(len(speakers), "speakers, all in all")
+        print("{} speakers, all in all".format(len(speakers)))
 
         # parse speakers profiles
         for speaker_url in speakers:
