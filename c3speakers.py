@@ -48,14 +48,20 @@ def congress_no(year, this_year=date.today().year):
                          "Only years between 1984 and the current year are allowed.")
 
 
-def headers():
+def custom_headers():
     """
     Custom headers for http(s) request.
     """
-    pass
+    headers = { "User-Agent":
+                "Mozilla/5.0 (Windows NT 6.3; WOW64; rv:41.0) Gecko/20100101 Firefox/41.0",
+                "Accept":
+                "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                "Accept-Encoding": "gzip,deflate",
+                "Accept-Language": "en-US,en;q=0.8"}
+    return headers
 
 
-def open_speakers_file(url):
+def open_website(url):
     """Open the file/website listing all C3 speakers for a given year.
     :param url: website address of C3 Fahrplan speakers info
 
@@ -65,8 +71,11 @@ def open_speakers_file(url):
     https://events.ccc.de/congress/2010/Fahrplan/speakers.de.html
     """
 
+    session = requests.Session()
+    headers = custom_headers()
+
     try:
-        r = requests.get(url, verify=False, timeout=5)
+        r = session.get(url, headers=headers, verify=False, timeout=5)
         if not r.status_code // 100 == 2:
             if r.status_code == 404:
                 return "404 – page not found"
@@ -128,7 +137,7 @@ def parse_speaker_profile(url):
     """
 
     # try to open speaker's profile page/file
-    check_url = open_speakers_file(url)
+    check_url = open_website(url)
     status = check_url[0]
     html_obj = check_url[1]
     if status is True:
@@ -192,7 +201,7 @@ def main():
 
     # test urls (on and offline)
     urls = (
-            # headertest,
+            headertest,
             testurl_offnon,
             testurl_on404,
             testurl_offtrue,
@@ -205,7 +214,7 @@ def main():
         print(url)
         try:
             # try to open speakers file/website
-            check_url = open_speakers_file(url)
+            check_url = open_website(url)
             status = check_url[0]
             html_obj = check_url[1]
             if status is True:
