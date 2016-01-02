@@ -63,29 +63,29 @@ def test_congressno_blah():
 
 def test_url_offline_invalid():
     this_url = testurl_offnon
-    this_check = open_speakers_file(this_url)
+    this_check = open_website(this_url)
     assert this_check == "ERROR: Not a valid file."
 
 
 def test_url_online_404():
     this_url = testurl_on404
-    this_check = open_speakers_file(this_url)
+    this_check = open_website(this_url)
     assert this_check == "404 – page not found"
 
 
 def test_url_offline_valid():
     this_url = testurl_offtrue
-    this_check = open_speakers_file(this_url)
+    this_check = open_website(this_url)
     assert this_check[0] is True
 
 
 def test_url_online_valid():
     this_url = testurl_ontrue
-    this_check = open_speakers_file(this_url)
+    this_check = open_website(this_url)
     assert this_check[0] is True
 
 
 def test_url_online_invalid():
     this_url = testurl_offnon2
-    this_check = open_speakers_file(this_url)
+    this_check = open_website(this_url)
     assert this_check == "ERROR: Not a valid file."
