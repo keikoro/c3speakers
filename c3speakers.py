@@ -3,6 +3,7 @@ import getopt
 import requests
 import re
 import time
+import sqlite3
 from urllib.request import urlopen
 from datetime import date
 from bs4 import BeautifulSoup, SoupStrainer
@@ -123,6 +124,7 @@ def find_speakers(html_obj):
         # debug
         print(str(speaker_id) + ": " + value)
         speakers[speaker_id] = value
+
     return speakers
 
 
@@ -156,6 +158,62 @@ def parse_speaker_profile(url):
             print(str(speaker_twitter))
 
 
+def db_connect(table, year):
+    """Create / connect to SQLite database.
+    :param table: name of the table for speakers' data
+    :param year: year YYYY
+    """
+    db_name = 'c3speakers' + str(year) + '.sqlite'
+
+    # create table for speakers
+    try:
+        db = sqlite3.connect(db_name)
+        cur = db.cursor()
+        cur.execute("""CREATE TABLE IF NOT EXISTS
+                    %s(id INTEGER PRIMARY KEY, name TEXT, twitter TEXT)
+                    """ % table)
+        cur.execute("SELECT Count(*) FROM %s" % table)
+        rows = cur.fetchone()
+        print("Table rows: %s" % rows)
+        db.commit()
+    except sqlite3.OperationalError as err:
+        # rollback on problems with db statement
+        print(str(err))
+        raise err
+        db.rollback()
+    finally:
+        db.close()
+
+    return db_name
+
+
+def db_write(db_name, table, speakers):
+    """Update table in DB.
+    :param db_name: name of the DB to operate on
+    :param table: the table that should be modified
+    """
+
+    db = sqlite3.connect(db_name)
+
+    # insert into table
+    try:
+        cur = db.cursor()
+        for id, name, twitter in speakers.items():
+            cur.execute("""INSERT INTO speakers(name, twitter)
+                      VALUES(?, ?)""", (name, twitter))
+        cur.execute("SELECT Count(*) FROM %s" % table)
+        rows = cur.fetchone()
+        print("Table rows: %s" % rows)
+        db.commit()
+    except sqlite3.OperationalError as err:
+        # rollback on problems with db statement
+        print(str(err))
+        raise err
+        db.rollback()
+    finally:
+        db.close()
+
+
 def main():
     table = 'speakers'
     year = date.today().year
@@ -181,7 +239,10 @@ def main():
     # year of congress + c3 shortcut
     try:
         congress_data = congress_no(year)
-        print(congress_data)
+        congress_year = congress_data[0]
+        congress_shortcut = congress_data[1]
+        print(congress_year)
+        print(congress_shortcut)
     except ValueError as err:
         print(err)
         sys.exit(1)
@@ -201,7 +262,7 @@ def main():
 
     # test urls (on and offline)
     urls = (
-            headertest,
+            # headertest,
             testurl_offnon,
             testurl_on404,
             testurl_offtrue,
@@ -225,17 +286,22 @@ def main():
                     print("---")
                     # display the no. of speakers that was found
                     if len(speakers) > 0:
+                        db_name = db_connect(table, congress_year)
+                        db_write(congress_shortcut, db_name, speakers)
+                        print("dsfdf")
                         print(len(speakers), "speakers, all in all")
                     else:
                         print("No speakers found.")
                 except Exception as err:
                     print("ERROR: No speakers found.")
+                    raise(err)
                     sys.exit(1)
                 break
         except ValueError as err:
             print("ERROR: Value entered is not a valid URL.")
             print(err)
 
+    # for testing only
     speakers = (speaker_test_1,
                speaker_test_2
                )
