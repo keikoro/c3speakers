@@ -3,6 +3,7 @@ import getopt
 import requests
 import re
 import time
+import os.path
 import sqlite3
 from urllib.request import urlopen
 from datetime import date
@@ -35,8 +36,7 @@ def congress_no(c3_year, this_year=date.today().year):
     try:
         year = int(c3_year)
 
-    # TODO
-    # allow c3 shortcuts to be entered instead of years, e.g. 30C3
+    # TODO allow c3 shortcuts to be entered instead of years, e.g. 30C3
     except ValueError as err:
         print("ERROR: Value entered is not a valid date.")
         print(err)
@@ -49,19 +49,20 @@ def congress_no(c3_year, this_year=date.today().year):
         return year, c3_id
     else:
         raise ValueError("ERROR: Value entered is not a valid year.\n"
-                         "Only years between 1984 and the current year are allowed.")
+                         "Only years between 1984 and the current year are "
+                         "allowed.")
 
 
 def custom_headers():
     """
     Custom headers for http(s) request.
     """
-    headers = { "User-Agent":
-                "Mozilla/5.0 (Windows NT 6.3; WOW64; rv:41.0) Gecko/20100101 Firefox/41.0",
-                "Accept":
-                "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-                "Accept-Encoding": "gzip,deflate",
-                "Accept-Language": "en-US,en;q=0.8"}
+    headers = {"User-Agent":
+                   "Mozilla/5.0 (Windows NT 6.3; WOW64; rv:41.0) Gecko/20100101 Firefox/41.0",
+               "Accept":
+                   "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+               "Accept-Encoding": "gzip,deflate",
+               "Accept-Language": "en-US,en;q=0.8"}
     return headers
 
 
@@ -86,7 +87,7 @@ def open_website(url):
             return "ERROR: Unexpected response %s" % r
         html = r.text
     # connection timeout
-    except requests.exceptions.ConnectTimeout as err:
+    except requests.exceptions.ConnectTimeout:
         return "ERROR: The connection timed out."
     # ambiguous exceptions
     except requests.exceptions.RequestException as err:
@@ -95,9 +96,10 @@ def open_website(url):
                     "%s" % str(err))
         # offline use – try opening file with urllib
         else:
+            # noinspection PyBroadException,PyBroadException
             try:
                 html = urlopen(url)
-            except Exception as err:
+            except Exception:
                 return "ERROR: Not a valid file."
 
     return True, html
@@ -106,7 +108,7 @@ def open_website(url):
 def find_speakers(html_obj):
     """
     Find URLs to speakers pages in speakers.html
-    :param html: the html object to parse with Beautiful Soup
+    :param html_obj: the html object to parse with Beautiful Soup
     """
     speakers = {}
 
@@ -120,12 +122,12 @@ def find_speakers(html_obj):
 
     # print out all valid URLs
     for item in soup.find_all('a', href=filter_links, string=filter_contents):
-        regex = ".+/speakers/([0-9]+).html"
+        regex = ".+/speakers/([0-9]+)(\..*[.html])"
         href = item['href']
         speaker_id = re.match(regex, href).group(1)
         value = item.get_text()
         # debug
-        print(str(speaker_id) + ": " + value)
+        # print(str(speaker_id) + ": " + value)
         speakers[speaker_id] = value
 
     return speakers
@@ -156,33 +158,35 @@ def parse_speaker_profile(url):
             regex = ".+/twitter.com/([@_A-Za-z0-9]+)"
             href = twitter_account['href']
             speaker_twitter = re.match(regex, href).group(1)
-            value = twitter_account.get_text()
-            # debug
-            print(str(speaker_twitter))
+            twitter_handle = twitter_account.get_text()
+            return twitter_handle
 
 
-def db_connect(table, c3_year):
+def db_connect(base_path, table, year):
     """Create / connect to SQLite database.
+    :param base_path: path to directory of sqlite db
     :param table: name of the table for speakers' data
     :param year: year YYYY
     """
     db_name = 'c3speakers' + str(year) + '.sqlite'
 
+    try:
+        db = sqlite3.connect(base_path + db_name)
+    except sqlite3.OperationalError:
+        print("ERROR: Cannot connect to database.")
+        return None
+
     # create table for speakers
     try:
-        db = sqlite3.connect(db_name)
         cur = db.cursor()
         cur.execute("""CREATE TABLE IF NOT EXISTS
                     %s(id INTEGER PRIMARY KEY, name TEXT, twitter TEXT)
                     """ % table)
         cur.execute("SELECT Count(*) FROM %s" % table)
-        rows = cur.fetchone()
-        print("Table rows: %s" % rows)
         db.commit()
     except sqlite3.OperationalError as err:
         # rollback on problems with db statement
         print(str(err))
-        raise err
         db.rollback()
     finally:
         db.close()
@@ -190,39 +194,51 @@ def db_connect(table, c3_year):
     return db_name
 
 
-def db_write(db_name, table, speakers):
+def db_write(base_path, db_name, table, speakers):
     """Update table in DB.
+    :param base_path:
     :param db_name: name of the DB to operate on
     :param table: the table that should be modified
+    :param speakers: dictionary containing speakers data
     """
 
-    db = sqlite3.connect(db_name)
+    try:
+        db = sqlite3.connect(base_path + db_name)
+    except sqlite3.OperationalError:
+        print("ERROR: Cannot connect to database.")
+        return None
 
     # insert into table
     try:
         cur = db.cursor()
-        for id, name, twitter in speakers.items():
-            cur.execute("""INSERT INTO speakers(name, twitter)
-                      VALUES(?, ?)""", (name, twitter))
-        cur.execute("SELECT Count(*) FROM %s" % table)
+        for speaker_id, speaker_name in speakers.items():
+            cur.execute("INSERT INTO speakers (id, name) "
+                        "SELECT ?, ? WHERE NOT EXISTS "
+                        "(SELECT * FROM " + table + " WHERE id = ?)",
+                        (int(speaker_id), speaker_name, int(speaker_id)))
+        cur.execute("SELECT Count(*) FROM " + table)
         rows = cur.fetchone()
-        print("Table rows: %s" % rows)
         db.commit()
+        print("Table rows: %s" % rows)
     except sqlite3.OperationalError as err:
         # rollback on problems with db statement
         print(str(err))
-        raise err
         db.rollback()
     finally:
         db.close()
 
 
 def main():
+    """
+    main function
+    """
     table = 'speakers'
     year = date.today().year
+    base_path = os.getcwd() + "/"
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 'yu:h', ['year=', 'url=', 'help'])
+        opts, args = getopt.getopt(sys.argv[1:], 'yu:h',
+                                   ['year=', 'url=', 'help'])
     except getopt.GetoptError as err:
         print(usage())
         print(err)
@@ -235,6 +251,7 @@ def main():
         elif opt in ('-y', '--year'):
             year = arg
         elif opt in ('-u', '--url'):
+            # TODO use url
             url = arg
     # test function
     print(hello_world())
@@ -254,9 +271,7 @@ def main():
     # possible speaker URLs
     # based on previous congresses
 
-    # TODO
-    # let user input alternative URLs
-    # (for Fahrplan mirrors)
+    # TODO let user input alternative URLs (for Fahrplan mirrors)
     urls = (
         "https://events.ccc.de/congress/" + str(
             year) + "/Fahrplan/speakers.html",
@@ -266,13 +281,13 @@ def main():
 
     # test urls (on and offline)
     urls = (
-            # headertest,
-            testurl_offnon,
-            testurl_on404,
-            testurl_offtrue,
-            testurl_ontrue,
-            testurl_offnon2
-            )
+        # headertest,
+        testurl_offnon,
+        testurl_on404,
+        testurl_offtrue,
+        testurl_ontrue,
+        testurl_offnon2
+    )
 
     # loop through possible URLs for speakers site
     for url in urls:
@@ -282,40 +297,59 @@ def main():
             status = check_url[0]
             html_obj = check_url[1]
             if status is True:
+                print("status true")
                 print(url)
                 try:
                     # fetch speaker IDs from valid URL
                     speakers = find_speakers(html_obj)
                     print("---")
-                    # display the no. of speakers that was found
-                    if len(speakers) > 0:
-                        db_name = db_connect(table, c3_year)
-                        db_write(c3_shortcut, db_name, speakers)
-                        print("Speakers:")
-                        print(len(speakers), "speakers, all in all")
-                    else:
-                        print("No speakers found.")
                 except Exception as err:
-                    print("ERROR: No speakers found.")
+                    print("ERROR: Cannot fetch speakers from file.")
+                    # TODO remove raise
+                    # debug
+                    raise err
                     sys.exit(1)
                 break
             else:
-                print("ERROR: Value entered is not a valid URL:\n"
-                        + str(url) + "\n")
+                print("ERROR: Value entered is not a valid URL:\n" +
+                      str(url) + "\n")
         except ValueError as err:
             print("ERROR: Value entered is not a valid URL.")
             print(err)
 
+    # debug
     # for testing only
-    speakers = (speaker_test_1,
-               speaker_test_2
-               )
+    speakers = {
+        testsp_1_id: testsp_1_name,
+        testsp_2_id: testsp_2_name,
+        testsp_3_id: testsp_3_name,
+        testsp_4_id: testsp_4_name,
+    }
 
-    # parse speakers profiles
-    for speaker in speakers:
-        # time delay to appear less bot-like
-        time.sleep(2)
-        parse_speaker_profile(speaker)
+    # display the no. of speakers that was found
+    if len(speakers) > 0:
+        print("Speakers:")
+        print(len(speakers), "speakers, all in all")
+
+        # parse speakers profiles
+        for speaker_url in speakers:
+            # time delay to appear less bot-like
+            # TODO change to 3
+            time.sleep(0.1)
+            twitter = parse_speaker_profile(speaker_url)
+            if twitter is True:
+                # twitter_profiles = {}
+                # twitter_profiles[speaker_id] = value
+                print(twitter)
+    else:
+        print("No speakers found.")
+
+    # database connection
+    try:
+        db_name = db_connect(base_path, table, c3_year)
+        db_write(base_path, db_name, table, speakers)
+    except:
+        pass
 
 
 if __name__ == "__main__":
