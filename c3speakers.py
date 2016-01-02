@@ -25,6 +25,29 @@ def usage():
     return howto
 
 
+def foreign_url(url):
+    """
+    :param url: the Fahrplan URL provided by the user
+
+    Fahrplan format e.g.
+    http://abc.de/congress/2000/Fahrplan/schedule.en.html
+    https://xyz.co.uk/congress/2015/Fahrplan/speakers.html
+
+    schedule.html ... Fahrplan main page
+    speakers.html ... speakers page
+    """
+
+    # check if speakers URL was provided
+    # account for differentiation between languages (.en.html vs. .de.html)
+    fahrplan_regex = "(.+/)([0-9]{4})(/Fahrplan/)[A-Za-z]+(\.[A-Za-z.]+)+"
+    fahrplan_data = re.match(fahrplan_regex, url)
+    base_url = fahrplan_data.group(1) + fahrplan_data.group(2) + fahrplan_data.group(3)
+    year = fahrplan_data.group(2)
+    file_ending = fahrplan_data.group(4)
+
+    return base_url, year, file_ending
+
+
 def congress_no(c3_year, this_year=date.today().year):
     """Return year and congress shortcut.
     :param c3_year: year of queried congress
@@ -92,7 +115,7 @@ def open_website(url):
     # ambiguous exceptions
     except requests.exceptions.RequestException as err:
         if "No connection adapters were found for" not in str(err):
-            return ("ERROR: Invalid request.\n{}".format(err))
+            return "ERROR: Invalid request.\n{}".format(err)
         # offline use – try opening file with urllib
         else:
             # noinspection PyBroadException,PyBroadException
@@ -234,6 +257,7 @@ def main():
     table = 'speakers'
     year = date.today().year
     base_path = os.getcwd() + "/"
+    # speakers_base = https://events.ccc.de/congress/{}/Fahrplan/speakers.html
 
     try:
         opts, args = getopt.getopt(sys.argv[1:], 'yu:h',
@@ -252,6 +276,12 @@ def main():
         elif opt in ('-u', '--url'):
             # TODO use url
             url = arg
+            base_url, year, file_ending = foreign_url(url)
+            # debug
+            print(base_url)
+            print(year)
+            print(file_ending)
+
     # test function
     print(hello_world())
 
