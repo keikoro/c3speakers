@@ -41,39 +41,68 @@ def foreign_url(url):
     # account for differentiation between languages (.en.html vs. .de.html)
     fahrplan_regex = "(.+/)([0-9]{4})(/Fahrplan/)[A-Za-z]+(\.[A-Za-z.]+)+"
     fahrplan_data = re.match(fahrplan_regex, url)
-    base_url = fahrplan_data.group(1) + fahrplan_data.group(2) + fahrplan_data.group(3)
+    base_url = fahrplan_data.group(1) + fahrplan_data.group(
+        2) + fahrplan_data.group(3)
     year = fahrplan_data.group(2)
     file_ending = fahrplan_data.group(4)
 
     return base_url, year, file_ending
 
 
-def congress_no(c3_year, this_year=date.today().year):
-    """Return year and congress shortcut.
-    :param c3_year: year of queried congress
-    :param this_year: current year
+def congress_data(year=None, c3_shortcut=None):
+    """Return year and shortcut for queried congress.
+    :param year: current year or year of queried congress
+    :param c3_shortcut: abbreviation for nth congress, e.g. 30c3 for 30th
     """
-    c3 = 'C3'
-    first = 1984
+    first_year = 1984
+    first_c3_no = 1
+    this_year = date.today().year
+    this_c3_no = this_year - first_year + 1
 
-    try:
-        year = int(c3_year)
+    if c3_shortcut:
+        # validate provided c3 shortcut
+        try:
+            c3_no_find = c3_shortcut.lower().rpartition('c3')
+            c3_no = c3_no_find[0]
+            c3_no = int(c3_no)
+        # invalid string entered
+        except ValueError as err:
+            print("ERROR: Value entered is not a valid congress.")
+            print(err)
+            sys.exit(1)
+        # integer value entered
+        except AttributeError as err:
+            print("ERROR: Value entered is not a valid congress.")
+            print(err)
+            sys.exit(1)
+        if first_c3_no <= c3_no <= this_c3_no:
+            year = this_year - (this_c3_no - c3_no)
+            return year, c3_no
+        else:
+            raise ValueError("ERROR: Value entered is not a valid "
+                             "congress.\nOnly congresses between 1C3 and "
+                             "{}C3 are allowed.".format(this_c3_no))
 
-    # TODO allow c3 shortcuts to be entered instead of years, e.g. 30C3
-    except ValueError as err:
-        print("ERROR: Value entered is not a valid date.")
-        print(err)
-        sys.exit(1)
+    if year:
+        #  validate provided year
+        try:
+            year = int(year)
+        # string entered
+        except ValueError as err:
+            print("ERROR: Value entered is not a valid year.")
+            print(err)
+            sys.exit(1)
+        # only allow congresses between the very first congresses and now
+        if first_year <= year <= this_year:
+            c3_no = year - first_year + 1
+            return year, c3_no
+        else:
+            raise ValueError("ERROR: Value entered is not a valid year.\n"
+                             "Only years between 1984 and the current year are "
+                             "allowed.")
 
-    # only allow congresses between the very first congresses and now
-    if 1984 <= year <= this_year:
-        c3_no = year - first + 1
-        c3_id = "{}{}".format(c3_no, c3)
-        return year, c3_id
-    else:
-        raise ValueError("ERROR: Value entered is not a valid year.\n"
-                         "Only years between 1984 and the current year are "
-                         "allowed.")
+    if not year and not c3_shortcut:
+        return this_year, this_c3_no
 
 
 def custom_headers():
@@ -255,13 +284,22 @@ def main():
     main function
     """
     table = 'speakers'
-    year = date.today().year
-    base_path = os.getcwd() + "/"
+    base_path = os.getcwd() + '/'
     # speakers_base = https://events.ccc.de/congress/{}/Fahrplan/speakers.html
 
+    # congress data for current year
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 'yu:h',
-                                   ['year=', 'url=', 'help'])
+        year, c3_no = congress_data()
+        c3_shortcut = "{}C3".format(c3_no)
+        # debug
+        print("{} > {}".format(year, c3_shortcut))
+    except ValueError as err:
+        print(err)
+        sys.exit(1)
+
+    try:
+        opts, args = getopt.getopt(sys.argv[1:], 'y:c:u:h',
+                                   ['year=', 'congress=', 'url=', 'help'])
     except getopt.GetoptError as err:
         print(usage())
         print(err)
@@ -271,8 +309,6 @@ def main():
         if opt in ('-h', '--help'):
             print(usage())
             sys.exit(1)
-        elif opt in ('-y', '--year'):
-            year = arg
         elif opt in ('-u', '--url'):
             # TODO use url
             url = arg
@@ -281,28 +317,33 @@ def main():
             print(base_url)
             print(year)
             print(file_ending)
-
-    # test function
-    print(hello_world())
-
-    # get congress data:
-    # year of congress + c3 shortcut
-    try:
-        c3_data = congress_no(year)
-        c3_year = c3_data[0]
-        c3_shortcut = c3_data[1]
-        print("{} : {}".format(c3_year, c3_shortcut))
-    except ValueError as err:
-        print(err)
-        sys.exit(1)
+        elif opt in ('-y', '--year'):
+            try:
+                year, c3_no = congress_data(year=arg)
+                c3_shortcut = "{}C3".format(c3_no)
+                print("{} > {}".format(year, c3_shortcut))
+                break
+            except ValueError as err:
+                print(err)
+                sys.exit(1)
+        elif opt in ('-c', '--congress'):
+            try:
+                year, c3_no = congress_data(c3_shortcut=arg)
+                c3_shortcut = "{}C3".format(c3_no)
+                print("{} > {}".format(year, c3_shortcut))
+                break
+            except ValueError as err:
+                print(err)
+                sys.exit(1)
 
     # possible speaker URLs
     # based on previous congresses
 
-    # TODO let user input alternative URLs (for Fahrplan mirrors)
     urls = (
-        "https://events.ccc.de/congress/{}/Fahrplan/speakers.html".format(year),
-        "https://events.ccc.de/congress/{}/Fahrplan/speakers.en.html".format(year)
+        "https://events.ccc.de/congress/{}/Fahrplan/speakers.html".format(
+            year),
+        "https://events.ccc.de/congress/{}/Fahrplan/speakers.en.html".format(
+            year)
     )
 
     # test urls (on and offline)
@@ -334,8 +375,6 @@ def main():
                     raise err
                     sys.exit(1)
                 break
-            else:
-                print("ERROR: Value entered is not a valid URL:\n{}".format(url))
         except ValueError as err:
             print("ERROR: Value entered is not a valid URL.")
             print(err)
@@ -369,7 +408,7 @@ def main():
 
     # database connection
     try:
-        db_name = db_connect(base_path, table, c3_year)
+        db_name = db_connect(base_path, table, year)
         db_write(base_path, db_name, table, speakers)
     except:
         pass
