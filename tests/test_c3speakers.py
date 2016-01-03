@@ -12,9 +12,9 @@ def test_helloworld():
 
 # this year's congress
 @pytest.fixture
-def this_c3_no():
+def this_c3_data():
     year, c3_no = congress_data(date.today().year)
-    return c3_no
+    return year, c3_no
 
 
 # error on invalid date entered
@@ -29,7 +29,7 @@ def err_invalid_date():
 def err_invalid_congress():
     return ("ERROR: Value entered is not a valid congress.\n"
             "Only congresses between 1C3 and {}C3 are allowed."
-            .format(this_c3_no()))
+            .format(this_c3_data()[1]))
 
 
 # pass – valid year
@@ -60,6 +60,12 @@ def test_congress_33c3():
     assert this_congress == (2016, 33)
 
 
+# pass – no year nor c3 shortcut provided, use current
+def test_congress_today():
+    this_congress = congress_data()
+    assert this_congress == this_c3_data()
+
+
 # fail – date before very first congress
 def test_congress_1983():
     year = '1983'
@@ -85,6 +91,7 @@ def test_congress_0c2():
         congress_data(c3_shortcut=congress)
     assert excinfo.value.code == 1
 
+
 # fail – results in str for congress no.
 # ValueError
 def test_congress_abC3():
@@ -92,6 +99,7 @@ def test_congress_abC3():
     with pytest.raises(SystemExit) as excinfo:
         congress_data(c3_shortcut=congress)
     assert excinfo.value.code == 1
+
 
 # fail – int instead of str entered for congress no.
 # AttributeError
