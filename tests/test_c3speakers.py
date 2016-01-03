@@ -173,7 +173,8 @@ def test_url_foreign_year1():
     url = "http://neato-fahrplan-backup.com/2010/Fahrplan/schedule.html"
     check_url = foreign_url(url)
     assert check_url == (
-        "http://neato-fahrplan-backup.com/2010/Fahrplan/", "2010", ".html")
+        "http://neato-fahrplan-backup.com/2010/Fahrplan/", "2010", None,
+        ".html")
 
 
 # pass - valid url with year
@@ -181,7 +182,7 @@ def test_url_foreign_year2():
     url = "https://mirror.ccc.de/2012/Fahrplan/speakers.en.html"
     check_url = foreign_url(url)
     assert check_url == (
-        "https://mirror.ccc.de/2012/Fahrplan/", "2012", ".en.html")
+        "https://mirror.ccc.de/2012/Fahrplan/", "2012", None, ".en.html")
 
 
 # pass - valid url with c3 shortcut
@@ -189,7 +190,8 @@ def test_url_foreign_c3shortcut():
     url = "http://nerds.ninja/31c3/justforyou/Fahrplan/schedule.de.html"
     check_url = foreign_url(url)
     assert check_url == (
-        "http://nerds.ninja/31c3/justforyou/Fahrplan/", "31c3", ".de.html")
+        "http://nerds.ninja/31c3/justforyou/Fahrplan/", None, "31c3",
+        ".de.html")
 
 
 # pass - valid url with c3 shortcut
@@ -197,7 +199,7 @@ def test_url_foreign_c3shortcut2():
     url = "http://hackfleisch.de/33C3/Fahrplan/speakers.html"
     check_url = foreign_url(url)
     assert check_url == (
-        "http://hackfleisch.de/33C3/Fahrplan/", "33C3", ".html")
+        "http://hackfleisch.de/33C3/Fahrplan/", None, "33C3", ".html")
 
 
 # fails - no valid year or congress shortcut
