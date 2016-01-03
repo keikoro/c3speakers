@@ -94,7 +94,7 @@ def test_congress_0c2():
 
 # fail – results in str for congress no.
 # ValueError
-def test_congress_abC3():
+def test_congress_abc3():
     congress = 'abC3'
     with pytest.raises(SystemExit) as excinfo:
         congress_data(c3_shortcut=congress)
@@ -155,3 +155,62 @@ def test_url_online_invalid():
     this_url = testurl_offnon2
     this_check = open_website(this_url)
     assert this_check == "ERROR: Not a valid file."
+
+
+# TEST FOREIGN URLs
+
+# error on invalid foreign URL
+@pytest.fixture
+def err_invalid_foreign_url():
+    return ("ERROR: The provided URL has an unexpected "
+            "format and cannot be used.\n"
+            "Will try to capture data from the "
+            "standard CCC URLs instead...")
+
+
+# pass - valid url with year
+def test_url_foreign_year1():
+    url = "http://neato-fahrplan-backup.com/2010/Fahrplan/schedule.html"
+    check_url = foreign_url(url)
+    assert check_url == (
+        "http://neato-fahrplan-backup.com/2010/Fahrplan/", "2010", ".html")
+
+
+# pass - valid url with year
+def test_url_foreign_year2():
+    url = "https://mirror.ccc.de/2012/Fahrplan/speakers.en.html"
+    check_url = foreign_url(url)
+    assert check_url == (
+        "https://mirror.ccc.de/2012/Fahrplan/", "2012", ".en.html")
+
+
+# pass - valid url with c3 shortcut
+def test_url_foreign_c3shortcut():
+    url = "http://nerds.ninja/31c3/justforyou/Fahrplan/schedule.de.html"
+    check_url = foreign_url(url)
+    assert check_url == (
+        "http://nerds.ninja/31c3/justforyou/Fahrplan/", "31c3", ".de.html")
+
+
+# pass - valid url with c3 shortcut
+def test_url_foreign_c3shortcut2():
+    url = "http://hackfleisch.de/33C3/Fahrplan/speakers.html"
+    check_url = foreign_url(url)
+    assert check_url == (
+        "http://hackfleisch.de/33C3/Fahrplan/", "33C3", ".html")
+
+
+# fails - no valid year or congress shortcut
+def test_url_foreign_invalid1():
+    url = "http://haxx0rz.com/1337/CCC/Fahrplan/speakers.html"
+    with pytest.raises(AttributeError) as excinfo:
+        foreign_url(url)
+    assert str(excinfo.value) == err_invalid_foreign_url()
+
+
+# fails - invalid year or congress shortcut
+def test_url_foreign_invalid2():
+    url = "http://oh-so-leet.de/100C3/Fahrplan/speakers.html"
+    with pytest.raises(AttributeError) as excinfo:
+        foreign_url(url)
+    assert str(excinfo.value) == err_invalid_foreign_url()
