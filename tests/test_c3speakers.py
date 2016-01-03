@@ -8,59 +8,117 @@ def test_helloworld():
     assert x == 'Hello, world!'
 
 
-# test obtaining congress no.
+# TEST CONGRESS DATA
+
+# this year's congress
 @pytest.fixture
-def err_wrongdate():
+def this_c3_no():
+    year, c3_no = congress_data(date.today().year)
+    return c3_no
+
+
+# error on invalid date entered
+@pytest.fixture
+def err_invalid_date():
     return ("ERROR: Value entered is not a valid year.\n"
             "Only years between 1984 and the current year are allowed.")
 
 
+# error on invalid congress entered
 @pytest.fixture
-def err_notadate():
-    return "ERROR: Value entered is not a valid date."
+def err_invalid_congress():
+    return ("ERROR: Value entered is not a valid congress.\n"
+            "Only congresses between 1C3 and {}C3 are allowed."
+            .format(this_c3_no()))
 
 
-def test_congressno_1964():
-    this_year = '1964'
+# pass – valid year
+def test_congress_1984():
+    year = 1984
+    this_congress = congress_data(year)
+    assert this_congress == (1984, 1)
+
+
+# pass – valid year (provided as str)
+def test_congress_2015():
+    year = '2015'
+    this_congress = congress_data(year)
+    assert this_congress == (2015, 32)
+
+
+# pass – valid c3 shortcut
+def test_congress_1c3():
+    congress = '1C3'
+    this_congress = congress_data(c3_shortcut=congress)
+    assert this_congress == (1984, 1)
+
+
+# pass – valid c3 shortcut
+def test_congress_33c3():
+    congress = '33c3'
+    this_congress = congress_data(c3_shortcut=congress)
+    assert this_congress == (2016, 33)
+
+
+# fail – date before very first congress
+def test_congress_1983():
+    year = '1983'
     with pytest.raises(ValueError) as excinfo:
-        congress_no(this_year)
-    # assert 'Value entered is not a valid date.' in str(excinfo.value)
-    assert str(excinfo.value) == err_wrongdate()
+        congress_data(year)
+    assert str(excinfo.value) == err_invalid_date()
 
 
-def test_congressno_2023():
-    this_year = '55555'
-    with pytest.raises(ValueError) as excinfo:
-        congress_no(this_year)
-    assert str(excinfo.value) == err_wrongdate()
-
-
-def test_congressno_2015():
-    this_year = 2015
-    this_congress = congress_no(this_year)
-    assert this_congress == (2015, '32C3')
-
-
-def test_congressno_1984():
-    this_year = 1984
-    this_congress = congress_no(this_year)
-    assert this_congress == (1984, '1C3')
-
-
-def test_congressno_1983():
-    this_year = '1983'
-    with pytest.raises(ValueError) as excinfo:
-        congress_no(this_year)
-    assert str(excinfo.value) == err_wrongdate()
-
-
-def test_congressno_blah():
-    this_year = 'blah'
+# fail – str entered for year (int)
+# ValueError
+def test_congress_yearblah():
+    year = 'blah'
     with pytest.raises(SystemExit) as excinfo:
-        congress_no(this_year)
+        congress_data(year)
     assert excinfo.value.code == 1
 
 
+# fail – results in None value for congress no.
+# ValueError
+def test_congress_0c2():
+    congress = '0c2'
+    with pytest.raises(SystemExit) as excinfo:
+        congress_data(c3_shortcut=congress)
+    assert excinfo.value.code == 1
+
+# fail – results in str for congress no.
+# ValueError
+def test_congress_abC3():
+    congress = 'abC3'
+    with pytest.raises(SystemExit) as excinfo:
+        congress_data(c3_shortcut=congress)
+    assert excinfo.value.code == 1
+
+# fail – int instead of str entered for congress no.
+# AttributeError
+def test_congress_no55():
+    congress = 55
+    with pytest.raises(SystemExit) as excinfo:
+        congress_data(c3_shortcut=congress)
+    assert excinfo.value.code == 1
+
+
+# fail – future date
+def test_congress_2100():
+    year = 2100
+    with pytest.raises(ValueError) as excinfo:
+        congress_data(year)
+    assert str(excinfo.value) == err_invalid_date()
+
+
+# fail – future congress
+def test_congress_99c3():
+    congress = '99C3'
+    with pytest.raises(ValueError) as excinfo:
+        congress_data(c3_shortcut=congress)
+    assert str(excinfo.value) == err_invalid_congress()
+
+
+# TEST URLs
 def test_url_offline_invalid():
     this_url = testurl_offnon
     this_check = open_website(this_url)
