@@ -38,15 +38,22 @@ def foreign_url(url):
     """
 
     # check if speakers URL was provided
-    # account for differentiation between languages (.en.html vs. .de.html)
-    fahrplan_regex = "(.+/)([0-9]{4})(/Fahrplan/)[A-Za-z]+(\.[A-Za-z.]+)+"
-    fahrplan_data = re.match(fahrplan_regex, url)
-    base_url = fahrplan_data.group(1) + fahrplan_data.group(
-        2) + fahrplan_data.group(3)
-    year = fahrplan_data.group(2)
-    file_ending = fahrplan_data.group(4)
+    fahrplan_regex = "(.+/)(((19|20)([0-9]{2})|([1-9][0-9]{1}[Cc]3))" \
+                     ".*/Fahrplan.*/)[A-Za-z]+(\.[A-Za-z.]*html)"
 
-    return base_url, year, file_ending
+    try:
+        fahrplan_data = re.match(fahrplan_regex, url)
+        base_url = fahrplan_data.group(1) + fahrplan_data.group(
+            2)
+        year = fahrplan_data.group(3)
+        # account for different file endings (.html, .en.html, .de.html)
+        file_ending = fahrplan_data.group(7)
+        return base_url, year, file_ending
+    except:
+        raise AttributeError("ERROR: The provided URL has an unexpected "
+                             "format and cannot be used.\n"
+                             "Will try to capture data from the "
+                             "standard CCC URLs instead...")
 
 
 def congress_data(year=None, c3_shortcut=None):
@@ -309,14 +316,20 @@ def main():
         if opt in ('-h', '--help'):
             print(usage())
             sys.exit(1)
+        # check for user-provided URL
         elif opt in ('-u', '--url'):
             # TODO use url
             url = arg
-            base_url, year, file_ending = foreign_url(url)
-            # debug
-            print(base_url)
-            print(year)
-            print(file_ending)
+            try:
+                base_url, foreign_year, file_ending = foreign_url(url)
+                # debug
+                print(base_url)
+                print(foreign_year)
+                print(file_ending)
+            except AttributeError as err:
+                print(err)
+        # check for user-provided year
+        # break when valid input found
         elif opt in ('-y', '--year'):
             try:
                 year, c3_no = congress_data(year=arg)
@@ -326,6 +339,8 @@ def main():
             except ValueError as err:
                 print(err)
                 sys.exit(1)
+        # check for user-provided congress shortcut
+        # break when valid input found
         elif opt in ('-c', '--congress'):
             try:
                 year, c3_no = congress_data(c3_shortcut=arg)
