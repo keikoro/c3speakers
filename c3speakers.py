@@ -293,12 +293,16 @@ def main():
     """
     c3 = 'C3'
     table = 'speakers'
+    file_ending = None
+    file_endings = ['.html', '.en.html', '.de.html']
+    urls = []
     base_path = os.getcwd() + '/'
     # speakers_base = https://events.ccc.de/congress/{}/Fahrplan/speakers.html
 
     # congress data for current year
     try:
         year, c3_no = congress_data()
+        speakers_base_url = "https://events.ccc.de/congress/{}/Fahrplan/".format(year)
         # debug
         print("{} > {}{} ... this year".format(year, c3_no, c3))
     except ValueError as err:
@@ -322,7 +326,7 @@ def main():
             # TODO use url
             url = arg
             try:
-                base_url, foreign_year, foreign_c3_no, file_ending = foreign_url(
+                speakers_base_url, foreign_year, foreign_c3_no, file_ending = foreign_url(
                     url)
                 try:
                     year, c3_no = congress_data(year=foreign_year, c3_shortcut=foreign_c3_no)
@@ -357,24 +361,24 @@ def main():
     # possible speaker URLs
     # based on previous congresses
 
-    urls = (
-        "https://events.ccc.de/congress/{}/Fahrplan/speakers.html".format(
-            year),
-        "https://events.ccc.de/congress/{}/Fahrplan/speakers.en.html".format(
-            year)
-    )
+    if file_ending:
+        urls.append("{}speakers{}".format(speakers_base_url, file_ending))
+    else:
+        for ending in file_endings:
+            urls.append("{}speakers{}".format(speakers_base_url, ending))
 
     # test urls (on and offline)
-    urls = (
+    urls = [
         # headertest,
-        testurl_offnon,
+        # testurl_offnon,
         testurl_on404,
         testurl_offtrue,
         testurl_ontrue,
         testurl_offnon2
-    )
+    ]
 
     # loop through possible URLs for speakers site
+    loop_filendings = 0
     for url in urls:
         try:
             # try to open speakers file/website
@@ -386,6 +390,10 @@ def main():
                 try:
                     # fetch speaker IDs from valid URL
                     speakers = find_speakers(html_obj)
+                    # determine file ending
+                    if not file_ending:
+                        file_ending = file_endings[loop_filendings]
+                        print(file_ending)
                 except Exception as err:
                     print("ERROR: Cannot fetch speakers from file.")
                     # TODO remove raise
@@ -393,6 +401,7 @@ def main():
                     raise err
                     sys.exit(1)
                 break
+            loop_filendings += 1
         except ValueError as err:
             print("ERROR: Value entered is not a valid URL.")
             print(err)
@@ -412,10 +421,11 @@ def main():
         print("{} speakers, all in all".format(len(speakers)))
 
         # parse speakers profiles
-        for speaker_url in speakers:
+        for speaker_id in speakers:
             # time delay to appear less bot-like
             # TODO change to 3
             time.sleep(0.1)
+            speaker_url = "{}/Fahrplan/{}{}".format(speakers_base_url, speaker_id, file_ending)
             twitter = parse_speaker_profile(speaker_url)
             if twitter is True:
                 # twitter_profiles = {}
