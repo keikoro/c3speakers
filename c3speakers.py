@@ -425,8 +425,10 @@ def main():
             # time delay to appear less bot-like
             # TODO change to 3
             time.sleep(0.1)
-            speaker_url = "{}/Fahrplan/{}{}".format(speakers_base_url, speaker_id, file_ending)
-            twitter = parse_speaker_profile(speaker_url)
+            # TODO code for querying actual speaker urls
+            # speaker_url = "{}speakers/{}{}".format(speakers_base_url, speaker_id, file_ending)
+            # twitter = parse_speaker_profile(speaker_url)
+            twitter = parse_speaker_profile(speaker_id)
             if twitter is True:
                 # twitter_profiles = {}
                 # twitter_profiles[speaker_id] = value
