@@ -38,17 +38,18 @@ def foreign_url(url):
     """
 
     # check if speakers URL was provided
-    fahrplan_regex = "(.+/)(((19|20)([0-9]{2})|([1-9][0-9]{1}[Cc]3))" \
+    fahrplan_regex = "(.+/)((((19|20)([0-9]{2}))|(([1-9][0-9]){1}[Cc]3))" \
                      ".*/Fahrplan.*/)[A-Za-z]+(\.[A-Za-z.]*html)"
 
     try:
         fahrplan_data = re.match(fahrplan_regex, url)
         base_url = fahrplan_data.group(1) + fahrplan_data.group(
             2)
-        year = fahrplan_data.group(3)
+        year = fahrplan_data.group(4)
+        c3_no = fahrplan_data.group(7)
         # account for different file endings (.html, .en.html, .de.html)
-        file_ending = fahrplan_data.group(7)
-        return base_url, year, file_ending
+        file_ending = fahrplan_data.group(9)
+        return base_url, year, c3_no, file_ending
     except:
         raise AttributeError("ERROR: The provided URL has an unexpected "
                              "format and cannot be used.\n"
@@ -290,6 +291,7 @@ def main():
     """
     main function
     """
+    c3 = 'C3'
     table = 'speakers'
     base_path = os.getcwd() + '/'
     # speakers_base = https://events.ccc.de/congress/{}/Fahrplan/speakers.html
@@ -297,9 +299,8 @@ def main():
     # congress data for current year
     try:
         year, c3_no = congress_data()
-        c3_shortcut = "{}C3".format(c3_no)
         # debug
-        print("{} > {}".format(year, c3_shortcut))
+        print("{} > {}{} ... this year".format(year, c3_no, c3))
     except ValueError as err:
         print(err)
         sys.exit(1)
@@ -321,11 +322,15 @@ def main():
             # TODO use url
             url = arg
             try:
-                base_url, foreign_year, file_ending = foreign_url(url)
-                # debug
-                print(base_url)
-                print(foreign_year)
-                print(file_ending)
+                base_url, foreign_year, foreign_c3_no, file_ending = foreign_url(
+                    url)
+                try:
+                    year, c3_no = congress_data(year=foreign_year, c3_shortcut=foreign_c3_no)
+                    print("{} > {}{} ... requested".format(year, c3_no, c3))
+                    break
+                except ValueError as err:
+                    print(err)
+                    sys.exit(1)
             except AttributeError as err:
                 print(err)
         # check for user-provided year
@@ -333,8 +338,7 @@ def main():
         elif opt in ('-y', '--year'):
             try:
                 year, c3_no = congress_data(year=arg)
-                c3_shortcut = "{}C3".format(c3_no)
-                print("{} > {}".format(year, c3_shortcut))
+                print("{} > {}{} ... requested".format(year, c3_no, c3))
                 break
             except ValueError as err:
                 print(err)
@@ -344,8 +348,7 @@ def main():
         elif opt in ('-c', '--congress'):
             try:
                 year, c3_no = congress_data(c3_shortcut=arg)
-                c3_shortcut = "{}C3".format(c3_no)
-                print("{} > {}".format(year, c3_shortcut))
+                print("{} > {}{} ... requested".format(year, c3_no, c3))
                 break
             except ValueError as err:
                 print(err)
