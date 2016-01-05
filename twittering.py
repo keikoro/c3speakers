@@ -3,8 +3,10 @@ import c3speakers
 import sqlite3
 import os
 import sys
-from datetime import date
+# import twitter
 from twitter import *
+from datetime import date
+from twitterconfig import *
 
 
 def db_query(dir_path, table):
@@ -72,6 +74,10 @@ def main():
     except ValueError as err:
         print(err)
         sys.exit(1)
+
+    t = Twitter(auth=OAuth(atoken, atoken_secret, ckey, ckey_secret))
+    x = t.statuses.home_timeline()
+    print(x[0])
 
 
 if __name__ == "__main__":
