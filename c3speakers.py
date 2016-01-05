@@ -8,6 +8,7 @@ import sqlite3
 from urllib.request import urlopen
 from datetime import date
 from bs4 import BeautifulSoup, SoupStrainer
+# TODO remove later (only for testing)
 from c3urls import *
 
 
@@ -52,8 +53,8 @@ def foreign_url(url):
     except:
         raise AttributeError("ERROR: The provided URL has an unexpected "
                              "format and cannot be used.\n"
-                             "Will try to capture data from the "
-                             "standard CCC URLs instead...")
+                             "Will try to capture data from CCC's "
+                             "default URLs instead...")
 
 
 def congress_data(year=None, c3_shortcut=None):
@@ -220,16 +221,16 @@ def parse_speaker_profile(url):
             return twitter_handle
 
 
-def db_connect(base_path, table, year):
+def db_connect(base_path, db_name, table, year):
     """Create / connect to SQLite database.
     :param base_path: path to directory of sqlite db
     :param table: name of the table for speakers' data
     :param year: year YYYY
     """
-    db_name = "c3speakers{}.sqlite".format(year)
+    db_file = "{}{}.sqlite".format(db_name, year)
 
     try:
-        db = sqlite3.connect(base_path + db_name)
+        db = sqlite3.connect(base_path + db_file)
     except sqlite3.OperationalError:
         print("ERROR: Cannot connect to database.")
         return None
@@ -249,7 +250,7 @@ def db_connect(base_path, table, year):
     finally:
         db.close()
 
-    return db_name
+    return db_file
 
 
 def db_write(base_path, db_name, table, speakers=None, twitter=None):
@@ -304,11 +305,14 @@ def main():
     """
     c3 = 'C3'
     table = 'speakers'
+    db_name = 'speakers'
     file_ending = None
+    # file endings used for prev. c3 websites (.html being the most common)
     file_endings = ['.html', '.en.html', '.de.html']
     urls = []
     twitters = {}
     base_path = os.getcwd() + '/'
+    # TODO switch later
     # base_url = "https://events.ccc.de/congress/"
     base_url = test_base
 
@@ -432,11 +436,10 @@ def main():
     if len(speakers) > 0:
         print("{} speakers, all in all".format(len(speakers)))
         # parse speakers profiles
-        # TODO replace this
+        # TODO switch later
         # for speaker_id in speakers:
         for speaker_id, name in speakers.items():
             # time delay to appear less bot-like
-            # TODO change to 3
             time.sleep(3)
             speaker_url = "{}{}/Fahrplan/speakers/{}{}".format(base_url, year, speaker_id, file_ending)
             print(speaker_url)
@@ -450,10 +453,10 @@ def main():
     # database connection
     try:
         # create db if not exists
-        db_name = db_connect(base_path, table, year)
+        db = db_connect(base_path, db_name, table, year)
         # fill with speaker data
-        db_write(base_path, db_name, table, speakers=speakers)
-        db_write(base_path, db_name, table, twitter=twitters)
+        db_write(base_path, db, table, speakers=speakers)
+        db_write(base_path, db, table, twitter=twitters)
     except TypeError as err:
         print(err)
 
