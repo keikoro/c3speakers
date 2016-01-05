@@ -163,9 +163,7 @@ def test_url_online_invalid():
 @pytest.fixture
 def err_invalid_foreign_url():
     return ("ERROR: The provided URL has an unexpected "
-            "format and cannot be used.\n"
-            "Will try to capture data from the "
-            "standard CCC URLs instead...")
+            "format and cannot be used.")
 
 
 # pass - valid url with year
