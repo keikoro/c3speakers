@@ -310,7 +310,7 @@ def main():
     twitters = {}
     file_ending = None
     # file endings used for prev. c3 websites (.html being the most common)
-    file_endings = ['.html', '.en.html', '.de.html']
+    file_endings = ('.html', '.en.html', '.de.html')
     # TODO switch later
     # base_url = "https://events.ccc.de/congress/"
     base_url = test_base
@@ -324,7 +324,6 @@ def main():
 
     if dir_path:
         dir_path = os.getcwd() + '/'
-    print(dir_path)
 
     # congress data for current year
     try:
@@ -397,16 +396,6 @@ def main():
             urls.append("{}speakers{}".format(speakers_base_url, ending))
 
     print(urls)
-
-    # test urls (on and offline)
-    urls = [
-        # headertest,
-        testurl_offnon,
-        testurl_on404,
-        testurl_offtrue,
-        testurl_ontrue,
-        testurl_offnon2
-    ]
 
     # loop through possible URLs for speakers site
     loop_filendings = 0
