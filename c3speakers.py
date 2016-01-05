@@ -5,6 +5,7 @@ import re
 import time
 import os.path
 import sqlite3
+import configparser
 from urllib.request import urlopen
 from datetime import date
 from bs4 import BeautifulSoup, SoupStrainer
@@ -44,17 +45,15 @@ def foreign_url(url):
 
     try:
         fahrplan_data = re.match(fahrplan_regex, url)
-        base_url = fahrplan_data.group(1)
+        speakers_base_url = fahrplan_data.group(1) + fahrplan_data.group(2)
         year = fahrplan_data.group(4)
         c3_no = fahrplan_data.group(7)
         # account for different file endings (.html, .en.html, .de.html)
         file_ending = fahrplan_data.group(9)
-        return base_url, year, c3_no, file_ending
+        return speakers_base_url, year, c3_no, file_ending
     except:
         raise AttributeError("ERROR: The provided URL has an unexpected "
-                             "format and cannot be used.\n"
-                             "Will try to capture data from CCC's "
-                             "default URLs instead...")
+                             "format and cannot be used.")
 
 
 def congress_data(year=None, c3_shortcut=None):
@@ -221,16 +220,17 @@ def parse_speaker_profile(url):
             return twitter_handle
 
 
-def db_connect(base_path, db_name, table, year):
+def db_connect(dir_path, db_name, table, year):
     """Create / connect to SQLite database.
-    :param base_path: path to directory of sqlite db
+    :param dir_path: path to directory of sqlite db
+    :param db_name: name of the db to connect to
     :param table: name of the table for speakers' data
     :param year: year YYYY
     """
     db_file = "{}{}.sqlite".format(db_name, year)
 
     try:
-        db = sqlite3.connect(base_path + db_file)
+        db = sqlite3.connect(dir_path + db_file)
     except sqlite3.OperationalError:
         print("ERROR: Cannot connect to database.")
         return None
@@ -253,16 +253,17 @@ def db_connect(base_path, db_name, table, year):
     return db_file
 
 
-def db_write(base_path, db_name, table, speakers=None, twitter=None):
+def db_write(dir_path, db_name, table, speakers=None, twitter=None):
     """Update table in DB.
-    :param base_path:
+    :param twitter:
+    :param dir_path:
     :param db_name: name of the DB to operate on
     :param table: the table that should be modified
     :param speakers: dictionary containing speakers data
     """
 
     try:
-        db = sqlite3.connect(base_path + db_name)
+        db = sqlite3.connect(dir_path + db_name)
     except sqlite3.OperationalError:
         print("ERROR: Cannot connect to database.")
         return None
@@ -272,25 +273,26 @@ def db_write(base_path, db_name, table, speakers=None, twitter=None):
         cur = db.cursor()
         if speakers:
             for speaker_id, speaker_name in speakers.items():
-                cur.execute("INSERT INTO speakers (id, name) "
+                cur.execute("INSERT INTO {} (id, name) "
                             "SELECT ?, ? WHERE NOT EXISTS "
-                            "(SELECT * FROM {} WHERE id = ?)".format(table),
+                            "(SELECT * FROM {} WHERE id = ?)".format(table,
+                                                                     table),
                             (int(speaker_id), speaker_name, int(speaker_id))
                             )
             cur.execute("SELECT Count(*) FROM {}".format(table))
-            rows = cur.fetchone()
             db.commit()
-            print("{} speakers inserted".format(rows[0]))
         elif twitter:
             for speaker_id, twitter in twitter.items():
                 cur.execute("UPDATE {} SET twitter=? "
                             "WHERE id=? AND twitter is NULL".format(table),
                             (twitter, int(speaker_id))
                             )
-            cur.execute("SELECT Count(twitter) FROM {} WHERE twitter is not NULL".format(table))
+            cur.execute(
+                "SELECT Count(twitter) FROM {} WHERE twitter is not NULL".format(
+                    table))
             rows = cur.fetchone()
             db.commit()
-            print("{} Twitter handles inserted".format(rows[0]))
+            print("{} Twitter handles identified".format(rows[0]))
     except sqlite3.OperationalError as err:
         # rollback on problems with db statement
         print(str(err))
@@ -304,17 +306,25 @@ def main():
     main function
     """
     c3 = 'C3'
-    table = 'speakers'
-    db_name = 'speakers'
+    urls = []
+    twitters = {}
     file_ending = None
     # file endings used for prev. c3 websites (.html being the most common)
     file_endings = ['.html', '.en.html', '.de.html']
-    urls = []
-    twitters = {}
-    base_path = os.getcwd() + '/'
     # TODO switch later
     # base_url = "https://events.ccc.de/congress/"
     base_url = test_base
+
+    # get vars from config file
+    config = configparser.ConfigParser()
+    config.read('config.txt')
+    dir_path = config.get('db', 'dir_path')
+    db_name = config.get('db', 'db_name')
+    table = config.get('db', 'table')
+
+    if dir_path:
+        dir_path = os.getcwd() + '/'
+    print(dir_path)
 
     # congress data for current year
     try:
@@ -340,12 +350,12 @@ def main():
         # check for user-provided URL
         elif opt in ('-u', '--url'):
             url = arg
-            print("Trying")
             try:
-                base_url, foreign_year, foreign_c3_no, file_ending = foreign_url(
+                speakers_base_url, foreign_year, foreign_c3_no, file_ending = foreign_url(
                     url)
                 try:
-                    year, c3_no = congress_data(year=foreign_year, c3_shortcut=foreign_c3_no)
+                    year, c3_no = congress_data(year=foreign_year,
+                                                c3_shortcut=foreign_c3_no)
                     print("{} > {}{} ... requested".format(year, c3_no, c3))
                     break
                 except ValueError as err:
@@ -353,6 +363,7 @@ def main():
                     sys.exit(1)
             except AttributeError as err:
                 print(err)
+                sys.exit(1)
         # check for user-provided year
         # break when valid input found
         elif opt in ('-y', '--year'):
@@ -377,11 +388,15 @@ def main():
     # possible speaker URLs
     # based on previous congresses
 
+    speakers_base_url = "{}{}/Fahrplan/".format(base_url, year)
+
     if file_ending:
-        urls.append("{}{}/Fahrplan/speakers{}".format(base_url, year, file_ending))
+        urls.append("{}speakers{}".format(speakers_base_url, file_ending))
     else:
         for ending in file_endings:
-            urls.append("{}{}/Fahrplan/speakers{}".format(base_url, year, ending))
+            urls.append("{}speakers{}".format(speakers_base_url, ending))
+
+    print(urls)
 
     # test urls (on and offline)
     urls = [
@@ -428,7 +443,8 @@ def main():
         testsp_1_id: testsp_1_name,
         testsp_2_id: testsp_2_name,
         testsp_3_id: testsp_3_name,
-        testsp_4_id: testsp_4_name
+        testsp_4_id: testsp_4_name,
+        testsp_5_id: testsp_5_name
     }
 
     # display the no. of speakers that was found
@@ -441,7 +457,11 @@ def main():
         for speaker_id, name in speakers.items():
             # time delay to appear less bot-like
             time.sleep(3)
-            speaker_url = "{}{}/Fahrplan/speakers/{}{}".format(base_url, year, speaker_id, file_ending)
+            # TODO switch later
+            # speaker_url = "{}{}/Fahrplan/speakers/{}{}".format(speakers_base_url, year, speaker_id, file_ending)
+            file_ending = '.html'
+            speaker_url = "{}speakers/{}{}".format(speakers_base_url,
+                                                   speaker_id, file_ending)
             print(speaker_url)
             twitter_handle = parse_speaker_profile(speaker_url)
             if twitter_handle:
@@ -453,10 +473,10 @@ def main():
     # database connection
     try:
         # create db if not exists
-        db = db_connect(base_path, db_name, table, year)
+        db = db_connect(dir_path, db_name, table, year)
         # fill with speaker data
-        db_write(base_path, db, table, speakers=speakers)
-        db_write(base_path, db, table, twitter=twitters)
+        db_write(dir_path, db, table, speakers=speakers)
+        db_write(dir_path, db, table, twitter=twitters)
     except TypeError as err:
         print(err)
 
