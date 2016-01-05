@@ -43,8 +43,7 @@ def foreign_url(url):
 
     try:
         fahrplan_data = re.match(fahrplan_regex, url)
-        base_url = fahrplan_data.group(1) + fahrplan_data.group(
-            2)
+        base_url = fahrplan_data.group(1)
         year = fahrplan_data.group(4)
         c3_no = fahrplan_data.group(7)
         # account for different file endings (.html, .en.html, .de.html)
@@ -194,6 +193,7 @@ def find_speakers(html_obj):
 
 def parse_speaker_profile(url):
     """
+    Parse a C3 speaker profile for a link to a Twitter account.
     :param url: url to an individual speaker profile
 
     Typical speaker URLs:
@@ -216,8 +216,7 @@ def parse_speaker_profile(url):
         for twitter_account in soup.find_all('a', href=filter_links):
             regex = ".+/twitter.com/([@_A-Za-z0-9]+)"
             href = twitter_account['href']
-            speaker_twitter = re.match(regex, href).group(1)
-            twitter_handle = twitter_account.get_text()
+            twitter_handle = re.match(regex, href).group(1)
             return twitter_handle
 
 
@@ -253,7 +252,7 @@ def db_connect(base_path, table, year):
     return db_name
 
 
-def db_write(base_path, db_name, table, speakers):
+def db_write(base_path, db_name, table, speakers=None, twitter=None):
     """Update table in DB.
     :param base_path:
     :param db_name: name of the DB to operate on
@@ -270,15 +269,27 @@ def db_write(base_path, db_name, table, speakers):
     # insert into table
     try:
         cur = db.cursor()
-        for speaker_id, speaker_name in speakers.items():
-            cur.execute("INSERT INTO speakers (id, name) "
-                        "SELECT ?, ? WHERE NOT EXISTS "
-                        "(SELECT * FROM {} WHERE id = ?)".format(table),
-                        (int(speaker_id), speaker_name, int(speaker_id)))
-        cur.execute("SELECT Count(*) FROM {}".format(table))
-        rows = cur.fetchone()
-        db.commit()
-        print("Table rows: {}".format(rows[0]))
+        if speakers:
+            for speaker_id, speaker_name in speakers.items():
+                cur.execute("INSERT INTO speakers (id, name) "
+                            "SELECT ?, ? WHERE NOT EXISTS "
+                            "(SELECT * FROM {} WHERE id = ?)".format(table),
+                            (int(speaker_id), speaker_name, int(speaker_id))
+                            )
+            cur.execute("SELECT Count(*) FROM {}".format(table))
+            rows = cur.fetchone()
+            db.commit()
+            print("{} speakers inserted".format(rows[0]))
+        elif twitter:
+            for speaker_id, twitter in twitter.items():
+                cur.execute("UPDATE {} SET twitter=? "
+                            "WHERE id=? AND twitter is NULL".format(table),
+                            (twitter, int(speaker_id))
+                            )
+            cur.execute("SELECT Count(twitter) FROM {} WHERE twitter is not NULL".format(table))
+            rows = cur.fetchone()
+            db.commit()
+            print("{} Twitter handles inserted".format(rows[0]))
     except sqlite3.OperationalError as err:
         # rollback on problems with db statement
         print(str(err))
@@ -296,13 +307,14 @@ def main():
     file_ending = None
     file_endings = ['.html', '.en.html', '.de.html']
     urls = []
+    twitters = {}
     base_path = os.getcwd() + '/'
-    # speakers_base = https://events.ccc.de/congress/{}/Fahrplan/speakers.html
+    # base_url = "https://events.ccc.de/congress/"
+    base_url = test_base
 
     # congress data for current year
     try:
         year, c3_no = congress_data()
-        speakers_base_url = "https://events.ccc.de/congress/{}/Fahrplan/".format(year)
         # debug
         print("{} > {}{} ... this year".format(year, c3_no, c3))
     except ValueError as err:
@@ -323,10 +335,10 @@ def main():
             sys.exit(1)
         # check for user-provided URL
         elif opt in ('-u', '--url'):
-            # TODO use url
             url = arg
+            print("Trying")
             try:
-                speakers_base_url, foreign_year, foreign_c3_no, file_ending = foreign_url(
+                base_url, foreign_year, foreign_c3_no, file_ending = foreign_url(
                     url)
                 try:
                     year, c3_no = congress_data(year=foreign_year, c3_shortcut=foreign_c3_no)
@@ -362,15 +374,15 @@ def main():
     # based on previous congresses
 
     if file_ending:
-        urls.append("{}speakers{}".format(speakers_base_url, file_ending))
+        urls.append("{}{}/Fahrplan/speakers{}".format(base_url, year, file_ending))
     else:
         for ending in file_endings:
-            urls.append("{}speakers{}".format(speakers_base_url, ending))
+            urls.append("{}{}/Fahrplan/speakers{}".format(base_url, year, ending))
 
     # test urls (on and offline)
     urls = [
         # headertest,
-        # testurl_offnon,
+        testurl_offnon,
         testurl_on404,
         testurl_offtrue,
         testurl_ontrue,
@@ -412,36 +424,38 @@ def main():
         testsp_1_id: testsp_1_name,
         testsp_2_id: testsp_2_name,
         testsp_3_id: testsp_3_name,
-        testsp_4_id: testsp_4_name,
+        testsp_4_id: testsp_4_name
     }
 
     # display the no. of speakers that was found
     print("---")
     if len(speakers) > 0:
         print("{} speakers, all in all".format(len(speakers)))
-
         # parse speakers profiles
-        for speaker_id in speakers:
+        # TODO replace this
+        # for speaker_id in speakers:
+        for speaker_id, name in speakers.items():
             # time delay to appear less bot-like
             # TODO change to 3
-            time.sleep(0.1)
-            # TODO code for querying actual speaker urls
-            # speaker_url = "{}speakers/{}{}".format(speakers_base_url, speaker_id, file_ending)
-            # twitter = parse_speaker_profile(speaker_url)
-            twitter = parse_speaker_profile(speaker_id)
-            if twitter is True:
-                # twitter_profiles = {}
-                # twitter_profiles[speaker_id] = value
-                print(twitter)
+            time.sleep(3)
+            speaker_url = "{}{}/Fahrplan/speakers/{}{}".format(base_url, year, speaker_id, file_ending)
+            print(speaker_url)
+            twitter_handle = parse_speaker_profile(speaker_url)
+            if twitter_handle:
+                print("TWITTER > {}".format(twitter_handle))
+                twitters[speaker_id] = twitter_handle
     else:
         print("No speakers found.")
 
     # database connection
     try:
+        # create db if not exists
         db_name = db_connect(base_path, table, year)
-        db_write(base_path, db_name, table, speakers)
-    except:
-        pass
+        # fill with speaker data
+        db_write(base_path, db_name, table, speakers=speakers)
+        db_write(base_path, db_name, table, twitter=twitters)
+    except TypeError as err:
+        print(err)
 
 
 if __name__ == "__main__":
