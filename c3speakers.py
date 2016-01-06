@@ -332,8 +332,8 @@ def main():
     db_name = config.get('db', 'db_name')
     table = config.get('db', 'table')
 
-    if dir_path:
-        dir_path = os.getcwd() + '/'
+    if not dir_path:
+        dir_path = "{}/".format(os.getcwd())
 
     # congress data for current year
     try:
