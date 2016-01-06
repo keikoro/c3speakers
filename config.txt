@@ -3,7 +3,7 @@
 # if left unspecified, the current working directory is used
 # format without quotes:
 # dir_path = /Users/your_username/some_directory/
-dir_path = None
+dir_path =
 
 # names for database and table to save values into
 db_name = speakers
