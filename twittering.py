@@ -3,9 +3,11 @@ import sqlite3
 import os
 import sys
 import json
+import urllib
 import c3speakers
 from twitter import *
 from datetime import date
+from socket import gethostbyname, gaierror
 from twitterconfig import *
 
 
@@ -51,7 +53,10 @@ def db_query(dir_path, table):
 
 
 def main():
-    year = date.today().year
+    c3 = 'C3'
+    # TODO switch later
+    # year = date.today().year
+    year = 2015
 
     # get vars from config file
     config = configparser.ConfigParser()
@@ -59,6 +64,16 @@ def main():
     dir_path = config.get('db', 'dir_path')
     db_name = config.get('db', 'db_name')
     table = config.get('db', 'table')
+
+    # congress data for specified year
+    try:
+        year, c3_no = c3speakers.congress_data(year=year)
+        c3_shortcut = "{}{}".format(c3_no, c3)
+        # debug
+        print("{} > {} ... this year".format(year, c3_shortcut))
+    except ValueError as err:
+        print(err)
+        sys.exit(1)
 
     if dir_path:
         dir_path = os.getcwd() + '/'
@@ -75,10 +90,23 @@ def main():
         print(err)
         sys.exit(1)
 
+    # split Twitter list into smaller lists with max. 100 elements
+    # due to Twitter's create_all limit of 100 accounts per call
+    # and immediately turn lists into strings
+    composite_list = (', '.join(twitters[x:x+4]) for x in range(0, len(twitters), 4))
+
+    # Twitter connection & actions start here
+    # list_slug = "CCC-{}-speakers".format(c3_shortcut)
     count = 0
     exists = 0
+    print(list_slug)
 
-    t = Twitter(auth=OAuth(atoken, atoken_secret, ckey, ckey_secret))
+    # connect to/authenticate with Twitter
+    try:
+        t = Twitter(auth=OAuth(atoken, atoken_secret, ckey, ckey_secret))
+    except Exception as err:
+        print(err)
+        sys.exit(1)
 
     try:
         result = t.lists.list(screen_name=username, reversed='true')
@@ -93,6 +121,7 @@ def main():
             # check if requested list exists
             if slug == list_slug:
                 exists = 1
+                print("List {} already exists".format(list_slug))
                 json.dump(twitter_list, outfile)
             count += 1
         # if requested list does not exist, create it
@@ -100,11 +129,21 @@ def main():
         if exists == 0:
             try:
                 t.lists.create(name=list_slug, mode='private')
-                print("Created Twitter list {}!".format(list_slug))
+                print("Created Twitter list {}".format(list_slug))
             # TODO less broad exceptions
             except Exception as err:
                 raise err
 
+        # update existing twitter list with new list members
+        try:
+            for sublist in composite_list:
+                # use create_all to add up to 100 members at once
+                # via comma-delimited string
+                t.lists.members.create_all(slug=list_slug, owner_screen_name=username, screen_name=sublist)
+                print("Added new members to twitter list {}:\n{}".format(list_slug, sublist))
+        # TODO less broad exceptions
+        except Exception as err:
+            raise err
 
 if __name__ == "__main__":
     main()
