@@ -53,7 +53,8 @@ def foreign_url(url):
         return speakers_base_url, year, c3_no, file_ending
     except:
         raise AttributeError("ERROR: The provided URL has an unexpected "
-                             "format and cannot be used.")
+                             "format and cannot be used.\n"
+                             "Try using a URL that references C3's 'Fahrplan' (schedule).")
 
 
 def congress_data(year=None, c3_shortcut=None):
@@ -96,17 +97,18 @@ def congress_data(year=None, c3_shortcut=None):
             year = int(year)
         # string entered
         except ValueError as err:
-            print("ERROR: Value entered is not a valid year.")
-            print(err)
+            print("ERROR: Value entered is not a valid year:\n"
+                  "{}".format(year))
             sys.exit(1)
         # only allow congresses between the very first congresses and now
         if first_year <= year <= this_year:
             c3_no = year - first_year + 1
             return year, c3_no
         else:
-            raise ValueError("ERROR: Value entered is not a valid year.\n"
+            raise ValueError("ERROR: Value entered is not a valid year:\n"
+                             "{}\n"
                              "Only years between 1984 and the current year are "
-                             "allowed.")
+                             "allowed.".format(year))
 
     if not year and not c3_shortcut:
         return this_year, this_c3_no
@@ -142,25 +144,34 @@ def open_website(url):
         r = session.get(url, headers=headers, verify=False, timeout=5)
         if not r.status_code // 100 == 2:
             if r.status_code == 404:
-                return "404 – page not found"
-            return "ERROR: Unexpected response {}".format(r)
+                print("404 – page not found")
+            print("ERROR: Unexpected response {}".format(r))
+        else:
+            print("status: 200")
         html = r.text
+        return html
     # connection timeout
     except requests.exceptions.ConnectTimeout:
         return "ERROR: The connection timed out."
     # ambiguous exceptions
     except requests.exceptions.RequestException as err:
         if "No connection adapters were found for" not in str(err):
-            return "ERROR: Invalid request.\n{}".format(err)
-        # offline use – try opening file with urllib
-        else:
-            # noinspection PyBroadException,PyBroadException
+            # check if url is a local file
+            file_path = "file:///{}".format(url)
             try:
-                html = urlopen(url)
-            except Exception:
-                return "ERROR: Not a valid file."
-
-    return True, html
+                html = urlopen(file_path)
+                return html
+            # exception while opening the provided file
+            except Exception as err:
+                print("ERROR: Not a valid file:")
+                print(u"\u2717 {}".format(url))
+            else:
+                print("ERROR: Invalid request. Cannot open website:\n"
+                "{}".format(url))
+                sys.exit(1)
+    except Exception as err:
+        print(err)
+        print("An unexpected error occurred.")
 
 
 def find_speakers(html_obj):
@@ -203,10 +214,8 @@ def parse_speaker_profile(url):
     """
 
     # try to open speaker's profile page/file
-    check_url = open_website(url)
-    status = check_url[0]
-    html_obj = check_url[1]
-    if status is True:
+    html_obj = open_website(url)
+    if html_obj:
         # look for Twitter links
         parse_links = SoupStrainer('a')
         filter_links = re.compile("(twitter.com)")
@@ -308,12 +317,13 @@ def main():
     c3 = 'C3'
     urls = []
     twitters = {}
-    file_ending = None
-    # file endings used for prev. c3 websites (.html being the most common)
-    file_endings = ('.html', '.en.html', '.de.html')
     # TODO switch later
     # base_url = "https://events.ccc.de/congress/"
     base_url = test_base
+    speakers_base_url = None
+    file_ending = None
+    # file endings used for prev. c3 websites (.html being the most common)
+    file_endings = ('.html', '.en.html', '.de.html')
 
     # get vars from config file
     config = configparser.ConfigParser()
@@ -330,6 +340,7 @@ def main():
         year, c3_no = congress_data()
         # debug
         print("{} > {}{} ... this year".format(year, c3_no, c3))
+    # unforseen exception
     except ValueError as err:
         print(err)
         sys.exit(1)
@@ -384,29 +395,28 @@ def main():
                 print(err)
                 sys.exit(1)
 
-    # possible speaker URLs
-    # based on previous congresses
+    # base URL for Fahrplan page (= basis for speakers page)
+    if not speakers_base_url:
+        speakers_base_url = "{}{}/Fahrplan/".format(base_url, year)
 
-    speakers_base_url = "{}{}/Fahrplan/".format(base_url, year)
-
+    # make sure to account for possible different file endings
     if file_ending:
         urls.append("{}speakers{}".format(speakers_base_url, file_ending))
     else:
         for ending in file_endings:
             urls.append("{}speakers{}".format(speakers_base_url, ending))
 
-    print(urls)
+    # debug
+    # print(urls)
 
     # loop through possible URLs for speakers site
     loop_filendings = 0
     for url in urls:
         try:
             # try to open speakers file/website
-            check_url = open_website(url)
-            status = check_url[0]
-            html_obj = check_url[1]
-            if status is True:
-                print(url)
+            html_obj = open_website(url)
+            if html_obj:
+                print("Opening speakers file:\n{}".format(url))
                 try:
                     # fetch speaker IDs from valid URL
                     speakers = find_speakers(html_obj)
@@ -425,9 +435,12 @@ def main():
         except ValueError as err:
             print("ERROR: Value entered is not a valid URL.")
             print(err)
+        except TypeError as err:
+            print(err)
+            sys.exit(1)
 
-    # debug
     # for testing only
+    # TODO remove late
     speakers = {
         testsp_1_id: testsp_1_name,
         testsp_2_id: testsp_2_name,
@@ -451,10 +464,10 @@ def main():
             file_ending = '.html'
             speaker_url = "{}speakers/{}{}".format(speakers_base_url,
                                                    speaker_id, file_ending)
-            print(speaker_url)
+            print(u"\u2713 {}".format(speaker_url))
             twitter_handle = parse_speaker_profile(speaker_url)
             if twitter_handle:
-                print("TWITTER > {}".format(twitter_handle))
+                print("Twitter: {}".format(twitter_handle))
                 twitters[speaker_id] = twitter_handle
     else:
         print("No speakers found.")
