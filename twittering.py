@@ -74,8 +74,8 @@ def main():
         print(err)
         sys.exit(1)
 
-    if dir_path:
-        dir_path = os.getcwd() + '/'
+    if not dir_path:
+        dir_path = "{}/".format(os.getcwd())
 
     try:
         # connect to db
