@@ -7,7 +7,6 @@ import urllib
 import c3speakers
 from twitter import *
 from datetime import date
-from socket import gethostbyname, gaierror
 from twitterconfig import *
 
 
@@ -99,20 +98,28 @@ def main():
     # list_slug = "CCC-{}-speakers".format(c3_shortcut)
     count = 0
     exists = 0
-    print(list_slug)
+    # debug
+    # print(list_slug)
 
     # connect to/authenticate with Twitter
     try:
         t = Twitter(auth=OAuth(atoken, atoken_secret, ckey, ckey_secret))
+    # TODO less broad exceptions
     except Exception as err:
         print(err)
         sys.exit(1)
 
     try:
         result = t.lists.list(screen_name=username, reversed='true')
-    # TODO less broad exceptions
+    # raise exception in case we cannot connect to Twitter
+    except urllib.error.URLError as err:
+        print("ERROR: Cannot connect to Twitter at this time.")
+        sys.exit(1)
+    # unknown other exception > exit program
     except Exception as err:
-        raise err
+        print("An error occurred. Exiting program.")
+        print(err)
+        sys.exit(1)
 
     with open(output_file, 'a', encoding='utf8') as outfile:
         for twitter_list in result:
@@ -130,9 +137,15 @@ def main():
             try:
                 t.lists.create(name=list_slug, mode='private')
                 print("Created Twitter list {}".format(list_slug))
-            # TODO less broad exceptions
+            # exception in case we cannot connect to Twitter
+            except urllib.error.URLError:
+                print("ERROR: Cannot connect to Twitter.\n"
+                      "Creation of list {} impossible at this time.".format(list_slug))
+            # unknown other exception > exit program
             except Exception as err:
-                raise err
+                print("An error occurred. Exiting program.")
+                print(err)
+                sys.exit(1)
 
         # update existing twitter list with new list members
         try:
@@ -141,9 +154,15 @@ def main():
                 # via comma-delimited string
                 t.lists.members.create_all(slug=list_slug, owner_screen_name=username, screen_name=sublist)
                 print("Added new members to twitter list {}:\n{}".format(list_slug, sublist))
-        # TODO less broad exceptions
+        # exception in case we cannot connect to Twitter
+        except urllib.error.URLError:
+            print("ERROR: Cannot connect to Twitter.\n"
+                  "Adding new members to list {} impossible at this time.".format(list_slug))
+        # unknown other exception > exit program
         except Exception as err:
-            raise err
+            print("An error occurred. Exiting program.")
+            print(err)
+            sys.exit(1)
 
 if __name__ == "__main__":
     main()
