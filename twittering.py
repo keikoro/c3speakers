@@ -1,9 +1,9 @@
 import configparser
-import c3speakers
 import sqlite3
 import os
 import sys
-# import twitter
+import json
+import c3speakers
 from twitter import *
 from datetime import date
 from twitterconfig import *
@@ -75,9 +75,35 @@ def main():
         print(err)
         sys.exit(1)
 
+    count = 0
+    exists = 0
+
     t = Twitter(auth=OAuth(atoken, atoken_secret, ckey, ckey_secret))
-    x = t.statuses.home_timeline()
-    print(x[0])
+
+    try:
+        result = t.lists.list(screen_name=username, reversed='true')
+    # TODO less broad exceptions
+    except Exception as err:
+        raise err
+
+    with open(output_file, 'a', encoding='utf8') as outfile:
+        for twitter_list in result:
+            # check slugs of all lists
+            slug = result[count]['slug']
+            # check if requested list exists
+            if slug == list_slug:
+                exists = 1
+                json.dump(twitter_list, outfile)
+            count += 1
+        # if requested list does not exist, create it
+        # and make it a private list for now
+        if exists == 0:
+            try:
+                t.lists.create(name=list_slug, mode='private')
+                print("Created Twitter list {}!".format(list_slug))
+            # TODO less broad exceptions
+            except Exception as err:
+                raise err
 
 
 if __name__ == "__main__":
