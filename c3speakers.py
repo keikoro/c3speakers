@@ -33,6 +33,7 @@ import sqlite3
 import configparser
 from urllib.request import urlopen
 import urllib.error
+import time
 from datetime import date
 from bs4 import BeautifulSoup, SoupStrainer
 
@@ -68,8 +69,6 @@ def foreign_url(url):
     # - contain a year YYYY or C3 shortcut
     # - contain the folder /Fahrplan/
     # - end in .html
-    # TODO: allow users to provide URL to Fahrplan index page
-    # i.e. URL ending in /Fahrplan/ instead of speakers.html or schedule.html
     fahrplan_regex = "(.+/)((((19|20)([0-9]{2}))|(([1-9][0-9]){1}[Cc]3))" \
                      ".*/Fahrplan.*/)[A-Za-z]+(\.[A-Za-z.]*html)"
     try:
@@ -396,8 +395,8 @@ def db_write(dir_path, db_name, table, speakers=None, twitter=None):
         return None
 
     # insert data into table for speakers
-    # TODO comparision of current db contents and retrieved contents
-    # -> existing speakers and twitter handles aren't auto-removed!!
+    # -> existing speakers and twitter handles are not auto-removed!!
+    # but they are printed out
     try:
         cur = db.cursor()
         # if speakers dict was provided, insert IDs and names of speakers
@@ -593,8 +592,6 @@ def main():
     # loop through possible URLs for speakers site until a match is found
     loop_filendings = 0
     for url in urls:
-        # TODO remove later
-        # break
         try:
             # try to open speakers file/website
             html_obj = open_website(url)
@@ -638,8 +635,7 @@ def main():
             # display the how-many-th speaker is queried
             print("Speaker #{} of {}".format(count_speakers, total_speakers))
             # time delay to appear less bot-like (3 is a good number)
-            # TODO uncomment later
-            # time.sleep(3)
+            time.sleep(3)
             speaker_url = "{}speakers/{}{}".format(speakers_base_url,
                                                    speaker_id, file_ending)
             # return speaker's twitter handle if applicable
