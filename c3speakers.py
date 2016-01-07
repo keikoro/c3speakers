@@ -28,7 +28,6 @@ import sys
 import getopt
 import requests
 import re
-import time
 import os.path
 import sqlite3
 import configparser
@@ -315,12 +314,68 @@ def db_connect(dir_path, db_name, table, year):
         db.commit()
     except sqlite3.OperationalError as err:
         # rollback on problems with db statement
+        print("Could not query the database as requested.")
         print(str(err))
         db.rollback()
     finally:
         db.close()
 
     return db_file
+
+
+def db_query(dir_path, db_name, table, column=None):
+    """Query table in DB.
+    :param dir_path: path to the directory containing the sqlite db
+    :param db_name: name of the DB to operate on
+    :param table: name of the to-be-modified table holding speakers' data
+    :param column: table column to query
+    """
+    results = {}
+
+    # try to connect to the sqlite database;
+    # as the connect was already checked, this should not result in a new file
+    try:
+        db = sqlite3.connect(dir_path + db_name)
+    except sqlite3.OperationalError:
+        print("ERROR: Cannot connect to database.")
+        return None
+
+    # check for validity of table column provided by user
+    if not column:
+        select = '*'
+        column = 'id'
+    elif column == 'name' or column == 'twitter':
+        select = "id, {}".format(column)
+    else:
+        print("ERROR: The provided table column is not valid. Exiting.")
+        sys.exit(1)
+
+    # query table for provided column
+    try:
+        cur = db.cursor()
+        cur.execute(
+            "SELECT count(id) FROM {} WHERE {} != '' ".format(table, column)
+        )
+        rows = cur.fetchone()
+        # if there are any results, put them into a dictionary and return it
+        if rows[0] > 0:
+            cur.execute("SELECT {} FROM {} "
+                        "WHERE {} != '' ".format(select, table, column)
+                        )
+            rows = cur.fetchall()
+            # ids have to be converted to str as parsed vals are strings
+            for row in rows:
+                speaker_id = str(row[0])
+                results[speaker_id] = row[1]
+            db.commit()
+            return results
+    except sqlite3.OperationalError as err:
+        # rollback on problems with db statement
+        print("Could not query the database as requested.")
+        print(str(err))
+        db.rollback()
+    finally:
+        db.close()
 
 
 def db_write(dir_path, db_name, table, speakers=None, twitter=None):
@@ -368,14 +423,18 @@ def db_write(dir_path, db_name, table, speakers=None, twitter=None):
             cur.execute(
                 "SELECT Count(twitter) FROM {} WHERE twitter is not NULL".format(
                     table))
-            rows = cur.fetchone()
             db.commit()
     except sqlite3.OperationalError as err:
         # rollback on problems with db statement
+        print("Could not query the database as requested.")
         print(str(err))
         db.rollback()
     finally:
         db.close()
+
+
+def compare_sets(db_values, new_values):
+    pass
 
 
 def main():
@@ -491,6 +550,8 @@ def main():
     # loop through possible URLs for speakers site until a match is found
     loop_filendings = 0
     for url in urls:
+        # TODO remove later
+        # break
         try:
             # try to open speakers file/website
             html_obj = open_website(url)
@@ -534,7 +595,8 @@ def main():
             # display the how-many-th speaker is queried
             print("Speaker #{} of {}".format(count_speakers, total_speakers))
             # time delay to appear less bot-like (3 is a good number)
-            time.sleep(3)
+            # TODO uncomment later
+            # time.sleep(3)
             speaker_url = "{}speakers/{}{}".format(speakers_base_url,
                                                    speaker_id, file_ending)
             # return speaker's twitter handle if applicable
@@ -545,8 +607,8 @@ def main():
                 twitters[speaker_id] = twitter_handle
             # TODO remove later
             # limit queried speakers for testing!!
-            if count_speakers >= 10:
-                break
+            # if count_speakers >= 10:
+            #     break
             count_speakers += 1
 
         # display the no. of twitter handles provided;
@@ -554,14 +616,14 @@ def main():
         print("---")
         if twitters:
             print("{} Twitter handle(s) found:".format(len(twitters)))
-            for id, twitter in twitters.items():
+            for speaker_id, twitter in twitters.items():
                 print("@{}\t".format(twitter), end='')
             print('')
         else:
-            print("No Twitter handles found.")
+            print("Found no Twitter handles in Fahrplan.")
 
     else:
-        print("No speakers found.")
+        print("Found no speakers in Fahrplan.")
 
     # database connection
     try:
@@ -570,9 +632,42 @@ def main():
 
         # fill table for speakers with IDs + name
         db_write(dir_path, db, table, speakers=speakers)
-
         # update table for speakers with twitter handles where applicable
         db_write(dir_path, db, table, twitter=twitters)
+
+        # get values for
+        speakers_db = db_query(dir_path, db, table, column='name')
+
+        # compare values currently in DB with values obtained via request
+        if speakers_db:
+            print("---")
+            count_s_aft = len(speakers_db)
+            print("{} speaker(s) currently saved.".format(
+                count_s_aft))
+
+            # compare DB contents with current result set
+            # if speakers were removed or their names changed, they show up here
+            speakers_review = set(speakers_db.items()) - set(speakers.items())
+            if speakers_review:
+                print("---")
+                print("ATTENTION:")
+                for item in speakers_review:
+                    key = item[0]
+                    value_db = item[1]
+                    # speakers whose names changed show up in the current results
+                    try:
+                        value = speakers[key]
+                        print(u"\u2717 {} (id {}) was renamed to {}.".format(
+                            value_db, key, value))
+                    # speakers who were deleted don't show up in the current results
+                    except KeyError:
+                        # Key is not present
+                        print(
+                            u"\u2717 {} (id {}) is not listed in Fahrplan anymore.".format(
+                                value_db, key))
+                        pass
+                print("You might want to look into these changes and fix them manually.")
+
     except TypeError as err:
         print(err)
 
