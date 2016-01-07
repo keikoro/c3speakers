@@ -40,16 +40,20 @@ def foreign_url(url):
     speakers.html ... speakers page
     """
 
-    # check if speakers URL was provided
+    # check if speakers URL was provided:
+    # URL/file needs to:
+    # - contain a year YYYY or C3 shortcut
+    # - contain the folder /Fahrplan/
+    # - end in .html
     fahrplan_regex = "(.+/)((((19|20)([0-9]{2}))|(([1-9][0-9]){1}[Cc]3))" \
                      ".*/Fahrplan.*/)[A-Za-z]+(\.[A-Za-z.]*html)"
-
     try:
         fahrplan_data = re.match(fahrplan_regex, url)
         speakers_base_url = fahrplan_data.group(1) + fahrplan_data.group(2)
         year = fahrplan_data.group(4)
         c3_no = fahrplan_data.group(7)
         # account for different file endings (.html, .en.html, .de.html)
+        # -> language-dependent pages used for previous c3s
         file_ending = fahrplan_data.group(9)
         return speakers_base_url, year, c3_no, file_ending
     except:
@@ -68,8 +72,8 @@ def congress_data(year=None, c3_shortcut=None):
     this_year = date.today().year
     this_c3_no = this_year - first_year + 1
 
+    # validate provided c3 shortcut
     if c3_shortcut:
-        # validate provided c3 shortcut
         try:
             c3_no_find = c3_shortcut.lower().rpartition('c3')
             c3_no = c3_no_find[0]
@@ -79,11 +83,14 @@ def congress_data(year=None, c3_shortcut=None):
             print("ERROR: Value entered is not a valid congress.")
             print(err)
             sys.exit(1)
-        # integer value entered
+        # integer value entered (needs to be string)
         except AttributeError as err:
             print("ERROR: Value entered is not a valid congress.")
             print(err)
             sys.exit(1)
+
+        # if a potential c3 shortcut was found, check if it's for a valid c3
+        # only congresses between 1c3 and this year's c3 can be queried
         if first_c3_no <= c3_no <= this_c3_no:
             year = this_year - (this_c3_no - c3_no)
             return year, c3_no
@@ -91,17 +98,19 @@ def congress_data(year=None, c3_shortcut=None):
             raise ValueError("ERROR: Value entered is not a valid "
                              "congress.\nOnly congresses between 1C3 and "
                              "{}C3 are allowed.".format(this_c3_no))
-
+    # validate provided year
+    # check if string can be converted to int
     if year:
-        #  validate provided year
         try:
             year = int(year)
-        # string entered
+        # string that cannot be converted to int
         except ValueError:
             print("ERROR: Value entered is not a valid year:\n"
                   "{}".format(year))
             sys.exit(1)
-        # only allow congresses between the very first congresses and now
+
+        # if a year was found, check if it's a valid year
+        # only congresses between 1984 and this year can be queried
         if first_year <= year <= this_year:
             c3_no = year - first_year + 1
             return year, c3_no
@@ -111,6 +120,7 @@ def congress_data(year=None, c3_shortcut=None):
                              "Only years between 1984 and the current year are "
                              "allowed.".format(year))
 
+    # return c3 data for this year if no year or c3 shortcut were user-provided
     if not year and not c3_shortcut:
         return this_year, this_c3_no
 
@@ -119,6 +129,8 @@ def custom_headers():
     """
     Custom headers for http(s) request.
     """
+
+    # create headers to make requests look less bot-like
     headers = {"User-Agent":
                    "Mozilla/5.0 (Windows NT 6.3; WOW64; rv:41.0) Gecko/20100101 Firefox/41.0",
                "Accept":
@@ -129,24 +141,24 @@ def custom_headers():
 
 
 def open_website(url):
-    """Open the file/website listing all C3 speakers for a given year.
-    :param url: website address of C3 Fahrplan speakers info
-
-    previous URLs e.g.:
-    https://events.ccc.de/congress/2015/Fahrplan/speakers.html
-    https://events.ccc.de/congress/2012/Fahrplan/speakers.en.html
-    https://events.ccc.de/congress/2010/Fahrplan/speakers.de.html
+    """Open a website or file and return its HTML contents.
+    :param url: the website/file to be opened
     """
 
     session = requests.Session()
     headers = custom_headers()
 
+    # connect to the (assumed) website
     try:
         r = session.get(url, headers=headers, verify=False, timeout=5)
+        # check the status code returned by the web request
+        # only status 200 (OK) signifies the request was successful
         if not r.status_code // 100 == 2:
+            # output a separate message for 404 errors
             if r.status_code == 404:
                 print(u"\u2717 404 – page not found: {}".format(url))
                 return None
+            # output for all errors that are not 404
             print("ERROR: Unexpected response {}".format(r))
             return None
         else:
@@ -156,28 +168,31 @@ def open_website(url):
     # connection timeout
     except requests.exceptions.ConnectTimeout:
         return "ERROR: The connection timed out."
-    # ambiguous exceptions
+    # ambiguous exceptions on trying to connect to website
     except requests.exceptions.RequestException as err:
         # when there is a problem with reading the file
-        # check if it's a local file (requests does not work with those)
+        # check if it's a local file (requests lib does not work with those)
         if "No connection adapters were found for" not in str(err):
-            # check if url is actually a local file
             file_path = "file:///{}".format(url)
+            # check if url is actually a local file
             try:
                 html = urlopen(file_path)
                 print(u"\u2713 Opening {}".format(file_path))
                 return html
-            # exception while opening the provided file
+            # if the local file cannot be opened/does not exist
             except urllib.error.URLError:
                 print(u"\u2717 Not a valid file: {}".format(url))
-            # unexpected exception
+            # unforseen exception
             except Exception as err:
                 print(err)
                 sys.exit(1)
+        # if the url is NOT a local file, sth. else went wrong with the request
         else:
+            print(url)
             print("ERROR: Invalid request. Cannot open website:\n"
                       "{}".format(url))
             sys.exit(1)
+    # unforseen exception
     except Exception as err:
         print(err)
         print("An unexpected error occurred.")
@@ -185,27 +200,32 @@ def open_website(url):
 
 def find_speakers(html_obj):
     """
-    Find URLs to speakers pages in speakers.html
+    Find URLs to individual speakers pages in speakers.html
     :param html_obj: the html object to parse with Beautiful Soup
     """
     speakers = {}
 
-    # only look for URLs
-    # which contain '/speakers/'
-    # and which contain no other tags
+    # only look for <a> tags
     parse_links = SoupStrainer('a')
+    # look for the string /speakers/
     filter_links = re.compile("(/speakers/)")
+    # match any text – except tags! (tags won't get matched by this)
     filter_contents = re.compile(".*")
     soup = BeautifulSoup(html_obj, 'html.parser', parse_only=parse_links)
 
-    # print out all valid URLs
+    # find all URLs that match the defined criteria
     for item in soup.find_all('a', href=filter_links, string=filter_contents):
+        # filter out speaker IDs from all valid URLs
+        # speaker files are called .../speakers/1234.html etc.
+        # where 1234 is the speaker ID
         regex = ".+/speakers/([0-9]+)(\..*[.html])"
         href = item['href']
         speaker_id = re.match(regex, href).group(1)
         value = item.get_text()
         # debug
         # print("{} : {}".format(speaker_id, value))
+
+        # save all speaker IDs and speaker names into a dictionary
         speakers[speaker_id] = value
 
     return speakers
@@ -222,38 +242,45 @@ def parse_speaker_profile(url):
     https://events.ccc.de/congress/2012/Fahrplan/speakers/3943.de.html
     """
 
-    # try to open speaker's profile page/file
+    # try to open a speaker's profile page/file
     html_obj = open_website(url)
     if html_obj:
-        # look for Twitter links
+        # look for <a> tags
         parse_links = SoupStrainer('a')
+        # look for the string twitter.com
         filter_links = re.compile("(twitter.com)")
         soup = BeautifulSoup(html_obj, 'html.parser', parse_only=parse_links)
 
-        # print out all valid URLs
+        # find all URLs that match the defined criteria
         for twitter_account in soup.find_all('a', href=filter_links):
+            # filter out twitter handles from all valid URLs
+            # twitter handles are formatted http(s)://twitter.com/the_name
             regex = ".+/twitter.com/([@_A-Za-z0-9]+)"
             href = twitter_account['href']
             twitter_handle = re.match(regex, href).group(1)
+
             return twitter_handle
 
 
 def db_connect(dir_path, db_name, table, year):
     """Create / connect to SQLite database.
-    :param dir_path: path to directory of sqlite db
-    :param db_name: name of the db to connect to
-    :param table: name of the table for speakers' data
+    :param dir_path: path to the directory containing the sqlite db
+    :param db_name: name of the DB to connect to
+    :param table: name of the table to create for speakers' data
     :param year: year YYYY
     """
     db_file = "{}{}.sqlite".format(db_name, year)
 
+    # try to connect to the sqlite database;
+    # if the path is writeable and the file doesn't exist yet,
+    # a sqlite db with the requested name be created
     try:
         db = sqlite3.connect(dir_path + db_file)
     except sqlite3.OperationalError:
         print("ERROR: Cannot connect to database.")
         return None
 
-    # create table for speakers
+    # create table for speakers if there is none yet
     try:
         cur = db.cursor()
         cur.execute("CREATE TABLE IF NOT EXISTS {} "
@@ -273,22 +300,26 @@ def db_connect(dir_path, db_name, table, year):
 
 def db_write(dir_path, db_name, table, speakers=None, twitter=None):
     """Update table in DB.
-    :param twitter:
-    :param dir_path:
+    :param dir_path: path to the directory containing the sqlite db
     :param db_name: name of the DB to operate on
-    :param table: the table that should be modified
-    :param speakers: dictionary containing speakers data
+    :param table: name of the to-be-modified table holding speakers' data
+    :param speakers: dictionary containing speakers IDs and names
+    :param twitter: dictionary containing speakers IDs and twitter handles
     """
 
+    # try to connect to the sqlite database;
+    # as the connect was already checked, this should not result in a new file
     try:
         db = sqlite3.connect(dir_path + db_name)
     except sqlite3.OperationalError:
         print("ERROR: Cannot connect to database.")
         return None
 
-    # insert into table
+    # insert data into table for speakers
     try:
         cur = db.cursor()
+        # if speakers dict was provided, insert IDs and names of speakers
+        # if speaker already exists, their name isn't updated/reinserted
         if speakers:
             for speaker_id, speaker_name in speakers.items():
                 cur.execute("INSERT INTO {} (id, name) "
@@ -299,6 +330,8 @@ def db_write(dir_path, db_name, table, speakers=None, twitter=None):
                             )
             cur.execute("SELECT Count(*) FROM {}".format(table))
             db.commit()
+        # if twitter dict was provided, insert IDs and twitter handles of speakers
+        # if speaker already has a witter handle, it doesn't get updated/reinserted
         elif twitter:
             for speaker_id, twitter in twitter.items():
                 cur.execute("UPDATE {} SET twitter=? "
@@ -310,6 +343,8 @@ def db_write(dir_path, db_name, table, speakers=None, twitter=None):
                     table))
             rows = cur.fetchone()
             db.commit()
+            # display the no. of twitter handles provided;
+            # not the same as twitter handles inserted!
             print("---")
             print("{} Twitter handles identified".format(rows[0]))
             print("---")
@@ -329,6 +364,7 @@ def main():
     urls = []
     speakers = {}
     twitters = {}
+    # default URL to use for CCC Fahrplan requests
     # TODO switch later
     # base_url = "https://events.ccc.de/congress/"
     base_url = test_base
@@ -337,17 +373,19 @@ def main():
     # file endings used for prev. c3 websites (.html being the most common)
     file_endings = ('.html', '.en.html', '.de.html')
 
-    # get vars from config file
+    # get (user-provided, user-editable) vars from config file
+    # -> db name, db path, table name for speaker data
     config = configparser.ConfigParser()
     config.read('config.txt')
     dir_path = config.get('db', 'dir_path')
     db_name = config.get('db', 'db_name')
     table = config.get('db', 'table')
 
+    # use the current working directory to query DBs if no path was provided
     if not dir_path:
         dir_path = "{}/".format(os.getcwd())
 
-    # congress data for current year
+    # get congress data for current year (in any case)
     try:
         year, c3_no = congress_data()
         # debug
@@ -357,6 +395,7 @@ def main():
         print(err)
         sys.exit(1)
 
+    # check if any command line arguments were provided by user
     try:
         opts, args = getopt.getopt(sys.argv[1:], 'y:c:u:h',
                                    ['year=', 'congress=', 'url=', 'help'])
@@ -366,10 +405,11 @@ def main():
         sys.exit(2)
 
     for opt, arg in opts:
+        # help menu requested
         if opt in ('-h', '--help'):
             print(usage())
             sys.exit(1)
-        # check for user-provided URL
+        # separate URL provided for speakers file
         elif opt in ('-u', '--url'):
             url = arg
             try:
@@ -386,9 +426,10 @@ def main():
             except AttributeError as err:
                 print(err)
                 sys.exit(1)
-        # check for user-provided year
-        # break when valid input found
+        # particular date (year) provided by user
         elif opt in ('-y', '--year'):
+            # check for validity of user-provided year
+            # and break (no further checks of flags)
             try:
                 year, c3_no = congress_data(year=arg)
                 print("{} > {}{} ... requested".format(year, c3_no, c3))
@@ -396,9 +437,10 @@ def main():
             except ValueError as err:
                 print(err)
                 sys.exit(1)
-        # check for user-provided congress shortcut
-        # break when valid input found
+        # particular congress shortcut (xyC3) provided by user
         elif opt in ('-c', '--congress'):
+            # check for validity of user-provided c3 shortcut
+            # and break (no further checks of flags)
             try:
                 year, c3_no = congress_data(c3_shortcut=arg)
                 print("{} > {}{} ... requested".format(year, c3_no, c3))
@@ -407,11 +449,12 @@ def main():
                 print(err)
                 sys.exit(1)
 
-    # base URL for Fahrplan page (= basis for speakers page)
+    # create base URL for Fahrplan page (which contains speaker page)
     if not speakers_base_url:
         speakers_base_url = "{}{}/Fahrplan/".format(base_url, year)
 
     # make sure to account for possible different file endings
+    # used for previous congresses
     if file_ending:
         urls.append("{}speakers{}".format(speakers_base_url, file_ending))
     else:
@@ -421,7 +464,7 @@ def main():
     # debug
     # print(urls)
 
-    # loop through possible URLs for speakers site
+    # loop through possible URLs for speakers site until a match is found
     loop_filendings = 0
     for url in urls:
         try:
@@ -429,10 +472,10 @@ def main():
             html_obj = open_website(url)
             if html_obj:
                 print("Opening speakers file:\n{}".format(url))
+                # fetch speaker IDs from valid URL
                 try:
-                    # fetch speaker IDs from valid URL
                     speakers = find_speakers(html_obj)
-                    # determine file ending
+                    # determine file ending if it's not yet known
                     if not file_ending:
                         file_ending = file_endings[loop_filendings]
                         print(file_ending)
@@ -461,7 +504,6 @@ def main():
     #     testsp_5_id: testsp_5_name
     # }
 
-    # display the no. of speakers that was found
     print("---")
 
     # total no. of speakers
@@ -469,25 +511,31 @@ def main():
     # start counting up speakers
     count_speakers = 1
     if total_speakers > 0:
+        # display no. of speakers found
         print("{} speakers, all in all".format(total_speakers))
         print("---")
 
-        # parse speakers profiles
+        # parse all speakers' profiles
         # TODO switch later
         # for speaker_id in speakers:
         for speaker_id, name in speakers.items():
-            # current speaker no.
+            # display the how-many-th speaker is queried
             print("Speaker #{} of {}".format(count_speakers, total_speakers))
             count_speakers += 1
-            # time delay to appear less bot-like
+            # time delay to appear less bot-like (3 is a good number)
             time.sleep(3)
             # TODO switch later
+            # ??? is this still valid
             # speaker_url = "{}{}/Fahrplan/speakers/{}{}".format(speakers_base_url, year, speaker_id, file_ending)
+            # ??? is this still valid
             file_ending = '.html'
             speaker_url = "{}speakers/{}{}".format(speakers_base_url,
                                                    speaker_id, file_ending)
             ###
+
+            # return speaker's twitter handle if applicable
             twitter_handle = parse_speaker_profile(speaker_url)
+            # and add it to the twitters dictionary
             if twitter_handle:
                 print("Twitter: {}".format(twitter_handle))
                 twitters[speaker_id] = twitter_handle
@@ -496,10 +544,13 @@ def main():
 
     # database connection
     try:
-        # create db if not exists
+        # connect to the DB / create it if it not exists
         db = db_connect(dir_path, db_name, table, year)
-        # fill with speaker data
+
+        # fill table for speakers with IDs + name
         db_write(dir_path, db, table, speakers=speakers)
+
+        # update table for speakers with twitter handles where applicable
         db_write(dir_path, db, table, twitter=twitters)
     except TypeError as err:
         print(err)
