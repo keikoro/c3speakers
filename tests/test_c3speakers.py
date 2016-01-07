@@ -1,6 +1,6 @@
 import pytest
+
 from c3speakers import *
-from c3urls import *
 
 
 def test_helloworld():
