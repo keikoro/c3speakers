@@ -128,31 +128,6 @@ def test_congress_99c3():
     assert str(excinfo.value) == err_invalid_congress()
 
 
-# TEST URLs
-def test_url_offline_invalid():
-    this_url = format(testurl_offnon)
-    this_check = open_website(this_url)
-    assert this_check == None
-
-
-def test_url_online_404():
-    this_url = testurl_on404
-    this_check = open_website(this_url)
-    assert this_check == None
-
-
-def test_url_offline_valid():
-    this_url = testurl_offtrue
-    this_check = open_website(this_url)
-    assert this_check == None
-
-
-def test_url_online_invalid():
-    this_url = testurl_offnon2
-    this_check = open_website(this_url)
-    assert this_check == None
-
-
 # TEST FOREIGN URLs
 
 # error on invalid foreign URL
