@@ -7,6 +7,7 @@ import os.path
 import sqlite3
 import configparser
 from urllib.request import urlopen
+import urllib.error
 from datetime import date
 from bs4 import BeautifulSoup, SoupStrainer
 # TODO remove later (only for testing)
@@ -96,7 +97,7 @@ def congress_data(year=None, c3_shortcut=None):
         try:
             year = int(year)
         # string entered
-        except ValueError as err:
+        except ValueError:
             print("ERROR: Value entered is not a valid year:\n"
                   "{}".format(year))
             sys.exit(1)
@@ -144,31 +145,39 @@ def open_website(url):
         r = session.get(url, headers=headers, verify=False, timeout=5)
         if not r.status_code // 100 == 2:
             if r.status_code == 404:
-                print("404 – page not found")
+                print(u"\u2717 404 – page not found: {}".format(url))
+                return None
             print("ERROR: Unexpected response {}".format(r))
+            return None
         else:
-            print("status: 200")
-        html = r.text
-        return html
+            print(u"\u2717 Status: 200 - OK {}".format(url))
+            html = r.text
+            return html
     # connection timeout
     except requests.exceptions.ConnectTimeout:
         return "ERROR: The connection timed out."
     # ambiguous exceptions
     except requests.exceptions.RequestException as err:
+        # when there is a problem with reading the file
+        # check if it's a local file (requests does not work with those)
         if "No connection adapters were found for" not in str(err):
-            # check if url is a local file
+            # check if url is actually a local file
             file_path = "file:///{}".format(url)
             try:
                 html = urlopen(file_path)
+                print(u"\u2713 Opening {}".format(file_path))
                 return html
             # exception while opening the provided file
+            except urllib.error.URLError:
+                print(u"\u2717 Not a valid file: {}".format(url))
+            # unexpected exception
             except Exception as err:
-                print("ERROR: Not a valid file:")
-                print(u"\u2717 {}".format(url))
-            else:
-                print("ERROR: Invalid request. Cannot open website:\n"
-                "{}".format(url))
+                print(err)
                 sys.exit(1)
+        else:
+            print("ERROR: Invalid request. Cannot open website:\n"
+                      "{}".format(url))
+            sys.exit(1)
     except Exception as err:
         print(err)
         print("An unexpected error occurred.")
@@ -301,7 +310,9 @@ def db_write(dir_path, db_name, table, speakers=None, twitter=None):
                     table))
             rows = cur.fetchone()
             db.commit()
+            print("---")
             print("{} Twitter handles identified".format(rows[0]))
+            print("---")
     except sqlite3.OperationalError as err:
         # rollback on problems with db statement
         print(str(err))
@@ -316,6 +327,7 @@ def main():
     """
     c3 = 'C3'
     urls = []
+    speakers = {}
     twitters = {}
     # TODO switch later
     # base_url = "https://events.ccc.de/congress/"
@@ -441,22 +453,32 @@ def main():
 
     # for testing only
     # TODO remove late
-    speakers = {
-        testsp_1_id: testsp_1_name,
-        testsp_2_id: testsp_2_name,
-        testsp_3_id: testsp_3_name,
-        testsp_4_id: testsp_4_name,
-        testsp_5_id: testsp_5_name
-    }
+    # speakers = {
+    #     testsp_1_id: testsp_1_name,
+    #     testsp_2_id: testsp_2_name,
+    #     testsp_3_id: testsp_3_name,
+    #     testsp_4_id: testsp_4_name,
+    #     testsp_5_id: testsp_5_name
+    # }
 
     # display the no. of speakers that was found
     print("---")
-    if len(speakers) > 0:
-        print("{} speakers, all in all".format(len(speakers)))
+
+    # total no. of speakers
+    total_speakers = len(speakers)
+    # start counting up speakers
+    count_speakers = 1
+    if total_speakers > 0:
+        print("{} speakers, all in all".format(total_speakers))
+        print("---")
+
         # parse speakers profiles
         # TODO switch later
         # for speaker_id in speakers:
         for speaker_id, name in speakers.items():
+            # current speaker no.
+            print("Speaker #{} of {}".format(count_speakers, total_speakers))
+            count_speakers += 1
             # time delay to appear less bot-like
             time.sleep(3)
             # TODO switch later
@@ -464,7 +486,7 @@ def main():
             file_ending = '.html'
             speaker_url = "{}speakers/{}{}".format(speakers_base_url,
                                                    speaker_id, file_ending)
-            print(u"\u2713 {}".format(speaker_url))
+            ###
             twitter_handle = parse_speaker_profile(speaker_url)
             if twitter_handle:
                 print("Twitter: {}".format(twitter_handle))
