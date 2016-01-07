@@ -150,7 +150,7 @@ def open_website(url):
 
     # connect to the (assumed) website
     try:
-        r = session.get(url, headers=headers, verify=False, timeout=5)
+        r = session.get(url, headers=headers, verify=True, timeout=5)
         # check the status code returned by the web request
         # only status 200 (OK) signifies the request was successful
         if not r.status_code // 100 == 2:
@@ -162,7 +162,7 @@ def open_website(url):
             print("ERROR: Unexpected response {}".format(r))
             return None
         else:
-            print(u"\u2717 Status: 200 - OK {}".format(url))
+            print(u"\u2713 Opening {}".format(url))
             html = r.text
             return html
     # connection timeout
@@ -223,8 +223,7 @@ def find_speakers(html_obj):
         speaker_id = re.match(regex, href).group(1)
         value = item.get_text()
         # debug
-        # print("{} : {}".format(speaker_id, value))
-
+        print("{} : {}".format(speaker_id, value))
         # save all speaker IDs and speaker names into a dictionary
         speakers[speaker_id] = value
 
@@ -366,8 +365,8 @@ def main():
     twitters = {}
     # default URL to use for CCC Fahrplan requests
     # TODO switch later
-    # base_url = "https://events.ccc.de/congress/"
-    base_url = test_base
+    base_url = "https://events.ccc.de/congress/"
+    # base_url = test_base
     speakers_base_url = None
     file_ending = None
     # file endings used for prev. c3 websites (.html being the most common)
@@ -388,8 +387,6 @@ def main():
     # get congress data for current year (in any case)
     try:
         year, c3_no = congress_data()
-        # debug
-        print("{} > {}{} ... this year".format(year, c3_no, c3))
     # unforseen exception
     except ValueError as err:
         print(err)
@@ -418,7 +415,7 @@ def main():
                 try:
                     year, c3_no = congress_data(year=foreign_year,
                                                 c3_shortcut=foreign_c3_no)
-                    print("{} > {}{} ... requested".format(year, c3_no, c3))
+                    print("{}: {}{} ... requested".format(year, c3_no, c3))
                     break
                 except ValueError as err:
                     print(err)
@@ -432,7 +429,7 @@ def main():
             # and break (no further checks of flags)
             try:
                 year, c3_no = congress_data(year=arg)
-                print("{} > {}{} ... requested".format(year, c3_no, c3))
+                print("{}: {}{} ... requested".format(year, c3_no, c3))
                 break
             except ValueError as err:
                 print(err)
@@ -448,6 +445,10 @@ def main():
             except ValueError as err:
                 print(err)
                 sys.exit(1)
+
+    # debug
+    #
+    print("{}: {}{} ... this year".format(year, c3_no, c3))
 
     # create base URL for Fahrplan page (which contains speaker page)
     if not speakers_base_url:
@@ -471,7 +472,6 @@ def main():
             # try to open speakers file/website
             html_obj = open_website(url)
             if html_obj:
-                print("Opening speakers file:\n{}".format(url))
                 # fetch speaker IDs from valid URL
                 try:
                     speakers = find_speakers(html_obj)
@@ -519,7 +519,6 @@ def main():
         for speaker_id, name in speakers.items():
             # display the how-many-th speaker is queried
             print("Speaker #{} of {}".format(count_speakers, total_speakers))
-            count_speakers += 1
             # time delay to appear less bot-like (3 is a good number)
             time.sleep(3)
             # TODO switch later
@@ -537,6 +536,9 @@ def main():
             if twitter_handle:
                 print("Twitter: {}".format(twitter_handle))
                 twitters[speaker_id] = twitter_handle
+            if count_speakers >= 5:
+                break
+            count_speakers += 1
     else:
         print("No speakers found.")
 
