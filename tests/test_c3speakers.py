@@ -1,5 +1,6 @@
 import pytest
 from c3speakers import *
+from c3urls import *
 
 
 def test_helloworld():
@@ -19,9 +20,10 @@ def this_c3_data():
 
 # error on invalid date entered
 @pytest.fixture
-def err_invalid_date():
-    return ("ERROR: Value entered is not a valid year.\n"
-            "Only years between 1984 and the current year are allowed.")
+def err_invalid_date(year):
+    return ("ERROR: Value entered is not a valid year:\n{}\n"
+            "Only years between 1984 and the current year are "
+                             "allowed.".format(year))
 
 
 # error on invalid congress entered
@@ -71,7 +73,7 @@ def test_congress_1983():
     year = '1983'
     with pytest.raises(ValueError) as excinfo:
         congress_data(year)
-    assert str(excinfo.value) == err_invalid_date()
+    assert str(excinfo.value) == err_invalid_date(year)
 
 
 # fail – str entered for year (int)
@@ -115,7 +117,7 @@ def test_congress_2100():
     year = 2100
     with pytest.raises(ValueError) as excinfo:
         congress_data(year)
-    assert str(excinfo.value) == err_invalid_date()
+    assert str(excinfo.value) == err_invalid_date(year)
 
 
 # fail – future congress
@@ -128,33 +130,27 @@ def test_congress_99c3():
 
 # TEST URLs
 def test_url_offline_invalid():
-    this_url = testurl_offnon
+    this_url = format(testurl_offnon)
     this_check = open_website(this_url)
-    assert this_check == "ERROR: Not a valid file."
+    assert this_check == None
 
 
 def test_url_online_404():
     this_url = testurl_on404
     this_check = open_website(this_url)
-    assert this_check == "404 – page not found"
+    assert this_check == None
 
 
 def test_url_offline_valid():
     this_url = testurl_offtrue
     this_check = open_website(this_url)
-    assert this_check[0] is True
-
-
-def test_url_online_valid():
-    this_url = testurl_ontrue
-    this_check = open_website(this_url)
-    assert this_check[0] is True
+    assert this_check == None
 
 
 def test_url_online_invalid():
     this_url = testurl_offnon2
     this_check = open_website(this_url)
-    assert this_check == "ERROR: Not a valid file."
+    assert this_check == None
 
 
 # TEST FOREIGN URLs
@@ -163,8 +159,8 @@ def test_url_online_invalid():
 @pytest.fixture
 def err_invalid_foreign_url():
     return ("ERROR: The provided URL has an unexpected "
-            "format and cannot be used.")
-
+                             "format and cannot be used.\n"
+                             "Try using a URL that references C3's 'Fahrplan' (schedule).")
 
 # pass - valid url with year
 def test_url_foreign_year1():
