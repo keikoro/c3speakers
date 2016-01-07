@@ -183,18 +183,21 @@ def open_website(url):
                 print(u"\u2717 Not a valid file: {}".format(url))
             # unforseen exception
             except Exception as err:
+                print("An unexpected error occurred on line {}:".format(
+                    sys.exc_info()[-1].tb_lineno))
                 print(err)
                 sys.exit(1)
         # if the url is NOT a local file, sth. else went wrong with the request
         else:
             print(url)
             print("ERROR: Invalid request. Cannot open website:\n"
-                      "{}".format(url))
+                  "{}".format(url))
             sys.exit(1)
     # unforseen exception
     except Exception as err:
+        print("An unexpected error occurred on line {}:".format(
+            sys.exc_info()[-1].tb_lineno))
         print(err)
-        print("An unexpected error occurred.")
 
 
 def find_speakers(html_obj):
@@ -222,7 +225,7 @@ def find_speakers(html_obj):
         speaker_id = re.match(regex, href).group(1)
         value = item.get_text()
         # debug
-        print("{} : {}".format(speaker_id, value))
+        # print("{} : {}".format(speaker_id, value))
         # save all speaker IDs and speaker names into a dictionary
         speakers[speaker_id] = value
 
@@ -385,7 +388,9 @@ def main():
     try:
         year, c3_no = congress_data()
     # unforseen exception
-    except ValueError as err:
+    except Exception as err:
+        print("An unexpected error occurred on line {}:".format(
+            sys.exc_info()[-1].tb_lineno))
         print(err)
         sys.exit(1)
 
@@ -476,11 +481,12 @@ def main():
                     if not file_ending:
                         file_ending = file_endings[loop_filendings]
                         print(file_ending)
+                # unforseen exception
                 except Exception as err:
                     print("ERROR: Cannot fetch speakers from file.")
-                    # TODO remove raise
-                    # debug
-                    raise err
+                    print("An unexpected error occurred on line {}:".format(
+                        sys.exc_info()[-1].tb_lineno))
+                    print(err)
                     sys.exit(1)
                 break
             loop_filendings += 1
