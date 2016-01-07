@@ -363,9 +363,7 @@ def main():
     speakers = {}
     twitters = {}
     # default URL to use for CCC Fahrplan requests
-    # TODO switch later
     base_url = "https://events.ccc.de/congress/"
-    # base_url = test_base
     speakers_base_url = None
     file_ending = None
     # file endings used for prev. c3 websites (.html being the most common)
@@ -493,16 +491,6 @@ def main():
             print(err)
             sys.exit(1)
 
-    # for testing only
-    # TODO remove late
-    # speakers = {
-    #     testsp_1_id: testsp_1_name,
-    #     testsp_2_id: testsp_2_name,
-    #     testsp_3_id: testsp_3_name,
-    #     testsp_4_id: testsp_4_name,
-    #     testsp_5_id: testsp_5_name
-    # }
-
     print("---")
 
     # total no. of speakers
@@ -520,15 +508,8 @@ def main():
             print("Speaker #{} of {}".format(count_speakers, total_speakers))
             # time delay to appear less bot-like (3 is a good number)
             time.sleep(3)
-            # TODO switch later
-            # ??? is this still valid
-            # speaker_url = "{}{}/Fahrplan/speakers/{}{}".format(speakers_base_url, year, speaker_id, file_ending)
-            # ??? is this still valid
-            file_ending = '.html'
             speaker_url = "{}speakers/{}{}".format(speakers_base_url,
                                                    speaker_id, file_ending)
-            ###
-
             # return speaker's twitter handle if applicable
             twitter_handle = parse_speaker_profile(speaker_url)
             # and add it to the twitters dictionary
