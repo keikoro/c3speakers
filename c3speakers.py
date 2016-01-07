@@ -368,11 +368,6 @@ def db_write(dir_path, db_name, table, speakers=None, twitter=None):
                     table))
             rows = cur.fetchone()
             db.commit()
-            # display the no. of twitter handles provided;
-            # not the same as twitter handles inserted!
-            print("---")
-            print("{} Twitter handle(s) identified:".format(rows[0]))
-            print("---")
     except sqlite3.OperationalError as err:
         # rollback on problems with db statement
         print(str(err))
@@ -547,10 +542,22 @@ def main():
                 print("Twitter: {}".format(twitter_handle))
                 twitters[speaker_id] = twitter_handle
             # TODO remove later
-            # limit queried speakers to 5 for testing!!
-            if count_speakers >= 5:
+            # limit queried speakers for testing!!
+            if count_speakers >= 10:
                 break
             count_speakers += 1
+
+        # display the no. of twitter handles provided;
+        # not the same as twitter handles inserted!
+        print("---")
+        if twitters:
+            print("{} Twitter handle(s) found:".format(len(twitters)))
+            for id, twitter in twitters.items():
+                print("@{}\t".format(twitter), end='')
+            print('')
+        else:
+            print("No Twitter handles found.")
+
     else:
         print("No speakers found.")
 
