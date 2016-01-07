@@ -341,6 +341,8 @@ def db_write(dir_path, db_name, table, speakers=None, twitter=None):
         return None
 
     # insert data into table for speakers
+    # TODO comparision of current db contents and retrieved contents
+    # -> existing speakers and twitter handles aren't auto-removed!!
     try:
         cur = db.cursor()
         # if speakers dict was provided, insert IDs and names of speakers
