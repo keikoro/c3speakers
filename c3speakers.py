@@ -516,8 +516,6 @@ def main():
         print("---")
 
         # parse all speakers' profiles
-        # TODO switch later
-        # for speaker_id in speakers:
         for speaker_id, name in speakers.items():
             # display the how-many-th speaker is queried
             print("Speaker #{} of {}".format(count_speakers, total_speakers))
