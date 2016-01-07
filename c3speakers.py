@@ -1,3 +1,29 @@
+#! /usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+"""
+Find Chaos Communication Congress (C3) speakers for a given year
+and store their names and Twitter handles (where applicable)
+into an SQLite database.
+
+Copyright (c) 2016 K Kollmann <code∆k.kollmann·moe>
+
+License: http://opensource.org/licenses/MIT The MIT License (MIT)
+
+Usage:
+Use -h or --help for help on how to use the program.
+
+Users can specify the year or congress for which they want to
+query speakers, or provide their own URL or filename to parse
+speaker information from.
+By default the current year and the CCC's official speakers listing
+– https://events.ccc.de/congress/YYYY/Fahrplan/speakers.html –
+are used.
+
+For more information on what C3 is about see e.g.
+https://en.wikipedia.org/wiki/Chaos_Communication_Congress
+"""
+
 import sys
 import getopt
 import requests
@@ -38,11 +64,13 @@ def foreign_url(url):
     speakers.html ... speakers page
     """
 
-    # check if speakers URL was provided:
+    # check if correct URL was provided:
     # URL/file needs to:
     # - contain a year YYYY or C3 shortcut
     # - contain the folder /Fahrplan/
     # - end in .html
+    # TODO: allow users to provide URL to Fahrplan index page
+    # i.e. URL ending in /Fahrplan/ instead of speakers.html or schedule.html
     fahrplan_regex = "(.+/)((((19|20)([0-9]{2}))|(([1-9][0-9]){1}[Cc]3))" \
                      ".*/Fahrplan.*/)[A-Za-z]+(\.[A-Za-z.]*html)"
     try:
@@ -126,9 +154,10 @@ def congress_data(year=None, c3_shortcut=None):
 def custom_headers():
     """
     Custom headers for http(s) request.
+
+    Create headers to make requests look less bot-like.
     """
 
-    # create headers to make requests look less bot-like
     headers = {"User-Agent":
                    "Mozilla/5.0 (Windows NT 6.3; WOW64; rv:41.0) Gecko/20100101 Firefox/41.0",
                "Accept":
@@ -236,11 +265,6 @@ def parse_speaker_profile(url):
     """
     Parse a C3 speaker profile for a link to a Twitter account.
     :param url: url to an individual speaker profile
-
-    Typical speaker URLs:
-    https://events.ccc.de/congress/2015/Fahrplan/speakers/6238.html
-    https://events.ccc.de/congress/2009/Fahrplan/speakers/2650.en.html
-    https://events.ccc.de/congress/2012/Fahrplan/speakers/3943.de.html
     """
 
     # try to open a speaker's profile page/file
@@ -347,7 +371,7 @@ def db_write(dir_path, db_name, table, speakers=None, twitter=None):
             # display the no. of twitter handles provided;
             # not the same as twitter handles inserted!
             print("---")
-            print("{} Twitter handles identified".format(rows[0]))
+            print("{} Twitter handle(s) identified:".format(rows[0]))
             print("---")
     except sqlite3.OperationalError as err:
         # rollback on problems with db statement
