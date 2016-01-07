@@ -10,8 +10,6 @@ from urllib.request import urlopen
 import urllib.error
 from datetime import date
 from bs4 import BeautifulSoup, SoupStrainer
-# TODO remove later (only for testing)
-from c3urls import *
 
 
 def hello_world():
@@ -163,6 +161,7 @@ def open_website(url):
             return None
         else:
             print(u"\u2713 Opening {}".format(url))
+            r.encoding = r.apparent_encoding
             html = r.text
             return html
     # connection timeout
@@ -536,6 +535,8 @@ def main():
             if twitter_handle:
                 print("Twitter: {}".format(twitter_handle))
                 twitters[speaker_id] = twitter_handle
+            # TODO remove later
+            # limit queried speakers to 5 for testing!!
             if count_speakers >= 5:
                 break
             count_speakers += 1
