@@ -595,6 +595,8 @@ def main():
         try:
             # try to open speakers file/website
             html_obj = open_website(url)
+            # time delay to appear less bot-like (3 is a good number)
+            time.sleep(3)
             if html_obj:
                 # fetch speaker IDs from valid URL
                 try:
