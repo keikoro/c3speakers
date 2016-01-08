@@ -8,3 +8,6 @@ dir_path =
 # names for database and table to save values into
 db_name = speakers
 table = speakers
+
+[log]
+err_log = error_log.txt
