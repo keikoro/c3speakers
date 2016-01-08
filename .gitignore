@@ -3,3 +3,12 @@
 
 # PyCharm
 .idea/
+
+# Python
+**egg-info
+**cache**
+
+**config*
+!**config*template
+**.sqlite
+**.log
