@@ -15,9 +15,7 @@ def main():
     c3 = 'C3'
     # max amount of twitter users to add to one list
     tmax = 100
-    # TODO switch later
-    # year = date.today().year
-    year = 2015
+    year = date.today().year
 
     # get vars from config file
     config = configparser.ConfigParser()
