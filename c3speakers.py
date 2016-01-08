@@ -10,6 +10,9 @@ Copyright (c) 2016 K Kollmann <code∆k.kollmann·moe>
 
 License: http://opensource.org/licenses/MIT The MIT License (MIT)
 
+The script is dependent on
+- config.txt used for variables for file names and paths
+
 Usage:
 Use -h or --help for help on how to use the program.
 
@@ -20,7 +23,7 @@ By default the current year and the CCC's official speakers listing
 – https://events.ccc.de/congress/YYYY/Fahrplan/speakers.html –
 are used.
 
-For more information on what C3 is about see e.g.
+For more information about C3 see e.g.
 https://en.wikipedia.org/wiki/Chaos_Communication_Congress
 """
 
