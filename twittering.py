@@ -30,7 +30,7 @@ import urllib
 import c3speakers
 from twitter import *
 from datetime import date
-from twitterconfig import *
+from config_twitter import *
 
 
 def main():
