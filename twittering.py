@@ -55,10 +55,9 @@ def main():
     try:
         twitters_list = list(twitters.values())
     # if twitters dictionary is empty
-    except AttributeError as err:
+    except AttributeError:
         print("ERROR: No Twitter handles available to add to Twitter list.")
         sys.exit(1)
-
 
     # split list into smaller sublists + turn into comma-delimited strings
     # as Twitter only accepts max. 100 elements per create_all call
@@ -94,8 +93,8 @@ def main():
     except Exception as err:
         print("An unexpected error occurred on line {}:".format(
             sys.exc_info()[-1].tb_lineno))
+        print(err)
         print("Exiting program.")
-        # print(err)
         sys.exit(1)
 
     # iterate over all retrieved lists
@@ -118,14 +117,13 @@ def main():
         # raise exception in case connecting to Twitter is impossible
         except urllib.error.URLError:
             print("ERROR: Cannot connect to Twitter.\n"
-                  "Creation of list {} impossible at this time.".format(
-                list_slug))
+                  "Creation of list {} impossible at this time.".format(list_slug))
         # unforseen exception
         except Exception as err:
             print("An unexpected error occurred on line {}:".format(
                 sys.exc_info()[-1].tb_lineno))
+            print(err)
             print("Exiting program.")
-            # print(err)
             sys.exit(1)
 
     print("---")
@@ -150,8 +148,8 @@ def main():
     except Exception as err:
         print("An unexpected error occurred on line {}:".format(
             sys.exc_info()[-1].tb_lineno))
+        print(err)
         print("Exiting program.")
-        # print(err)
         sys.exit(1)
 
 
