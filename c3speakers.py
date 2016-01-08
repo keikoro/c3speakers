@@ -646,10 +646,6 @@ def main():
             if twitter_handle:
                 print("Twitter: {}".format(twitter_handle))
                 twitters[speaker_id] = twitter_handle
-            # TODO remove later
-            # limit queried speakers for testing!!
-            # if count_speakers >= 10:
-            #     break
             count_speakers += 1
 
         # display the no. of twitter handles provided;
