@@ -1,8 +1,9 @@
+#! /usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 import configparser
-import sqlite3
 import os
 import sys
-import json
 import urllib
 import c3speakers
 from twitter import *
@@ -10,49 +11,10 @@ from datetime import date
 from twitterconfig import *
 
 
-def db_query(dir_path, table):
-    """Update table in DB.
-    :param dir_path:
-    :param table: the table that should be modified
-    """
-    twitters = []
-
-    try:
-        # debug
-        print(dir_path)
-        db = sqlite3.connect(dir_path)
-    except sqlite3.OperationalError:
-        print("ERROR: Cannot connect to database.")
-        return None
-
-    # insert into table
-    try:
-        cur = db.cursor()
-        cur.execute(
-            "SELECT count(twitter) FROM {} WHERE twitter != '' ".format(table)
-        )
-        rows = cur.fetchone()
-        print("{} results".format(rows[0]))
-        print("---")
-        cur.execute("SELECT * FROM {} "
-                    "WHERE twitter != '' ".format(table)
-                    )
-        rows = cur.fetchall()
-        db.commit()
-        for row in rows:
-            print(row[2])
-            twitters.append(row[2])
-        return twitters
-    except sqlite3.OperationalError as err:
-        # rollback on problems with db statement
-        print(str(err))
-        db.rollback()
-    finally:
-        db.close()
-
-
 def main():
     c3 = 'C3'
+    # max amount of twitter users to add to one list
+    tmax = 100
     # TODO switch later
     # year = date.today().year
     year = 2015
@@ -81,88 +43,117 @@ def main():
         # connect to db
         db = c3speakers.db_connect(dir_path, db_name, table, year)
         # query for twitter accounts in db
-        twitters = db_query(db, table)
-        print(twitters)
+        twitters = c3speakers.db_query(dir_path, db, table, column='twitter')
     except TypeError as err:
         print(err)
+        sys.exit(1)
     except ValueError as err:
         print(err)
         sys.exit(1)
 
-    # split Twitter list into smaller lists with max. 100 elements
-    # due to Twitter's create_all limit of 100 accounts per call
-    # and immediately turn lists into strings
-    composite_list = (', '.join(twitters[x:x+4]) for x in range(0, len(twitters), 4))
+    # create list out of dictionary values (for Twitter handles)
+    try:
+        twitters_list = list(twitters.values())
+    # if twitters dictionary is empty
+    except AttributeError as err:
+        print("ERROR: No Twitter handles available to add to Twitter list.")
+        sys.exit(1)
 
-    # Twitter connection & actions start here
-    # list_slug = "CCC-{}-speakers".format(c3_shortcut)
-    count = 0
+
+    # split list into smaller sublists + turn into comma-delimited strings
+    # as Twitter only accepts max. 100 elements per create_all call
+    composite_list = (', '.join(twitters_list[x:x + tmax]) for x in
+                      range(0, len(twitters_list), tmax))
+
+    list_count = 0
     exists = 0
+    # Twitter connection & actions start here
+    list_slug = "CCC-{}-speakers".format(c3_shortcut)
+
     # debug
-    # print(list_slug)
+    print("List slug: {}".format(list_slug))
 
     # connect to/authenticate with Twitter
     try:
         t = Twitter(auth=OAuth(atoken, atoken_secret, ckey, ckey_secret))
-    # TODO less broad exceptions
+    # unforseen exception
     except Exception as err:
+        print("An unexpected error occurred on line {}:".format(
+            sys.exc_info()[-1].tb_lineno))
         print(err)
         sys.exit(1)
 
+    # retrieve users lists (includes private lists)
     try:
         result = t.lists.list(screen_name=username, reversed='true')
-    # raise exception in case we cannot connect to Twitter
-    except urllib.error.URLError as err:
+    # raise exception in case connecting to Twitter is impossible
+    except urllib.error.URLError:
         print("ERROR: Cannot connect to Twitter at this time.")
         sys.exit(1)
-    # unknown other exception > exit program
+    # unforseen exception
     except Exception as err:
-        print("An error occurred. Exiting program.")
-        print(err)
+        print("An unexpected error occurred on line {}:".format(
+            sys.exc_info()[-1].tb_lineno))
+        print("Exiting program.")
+        # print(err)
         sys.exit(1)
 
-    with open(output_file, 'a', encoding='utf8') as outfile:
-        for twitter_list in result:
-            # check slugs of all lists
-            slug = result[count]['slug']
-            # check if requested list exists
-            if slug == list_slug:
-                exists = 1
-                print("List {} already exists".format(list_slug))
-                json.dump(twitter_list, outfile)
-            count += 1
-        # if requested list does not exist, create it
-        # and make it a private list for now
-        if exists == 0:
-            try:
-                t.lists.create(name=list_slug, mode='private')
-                print("Created Twitter list {}".format(list_slug))
-            # exception in case we cannot connect to Twitter
-            except urllib.error.URLError:
-                print("ERROR: Cannot connect to Twitter.\n"
-                      "Creation of list {} impossible at this time.".format(list_slug))
-            # unknown other exception > exit program
-            except Exception as err:
-                print("An error occurred. Exiting program.")
-                print(err)
-                sys.exit(1)
+    # iterate over all retrieved lists
+    # to see if the new list to create/fill already exists
+    for each_list in result:
+        # check and try to match slugs of all retrieved lists
+        # with slug for the new list
+        slug = each_list['slug']
+        if slug == list_slug:
+            exists = 1
+            print("Twitter list {} already exists".format(list_slug))
+        list_count += 1
 
-        # update existing twitter list with new list members
+    # if the list does not exist yet, create it
+    # and make it a private list for now
+    if exists == 0:
         try:
-            for sublist in composite_list:
-                # use create_all to add up to 100 members at once
-                # via comma-delimited string
-                t.lists.members.create_all(slug=list_slug, owner_screen_name=username, screen_name=sublist)
-                print("Added new members to twitter list {}:\n{}".format(list_slug, sublist))
-        # exception in case we cannot connect to Twitter
+            t.lists.create(name=list_slug, mode='private')
+            print("Created Twitter list {}".format(list_slug))
+        # raise exception in case connecting to Twitter is impossible
         except urllib.error.URLError:
             print("ERROR: Cannot connect to Twitter.\n"
-                  "Adding new members to list {} impossible at this time.".format(list_slug))
-        # unknown other exception > exit program
+                  "Creation of list {} impossible at this time.".format(
+                list_slug))
+        # unforseen exception
         except Exception as err:
-            print("An error occurred. Exiting program.")
-            print(err)
+            print("An unexpected error occurred on line {}:".format(
+                sys.exc_info()[-1].tb_lineno))
+            print("Exiting program.")
+            # print(err)
             sys.exit(1)
+
+    print("---")
+
+    # update the list with new list members
+    # (non-existent Twitter accounts will be ignored)
+    try:
+        for sublist in composite_list:
+            # use create_all to add up to 100 members at once
+            # via comma-delimited string
+            t.lists.members.create_all(slug=list_slug,
+                                       owner_screen_name=username,
+                                       screen_name=sublist)
+            print(
+                "Added new members to twitter list {}:\n{}".format(list_slug,
+                                                                   sublist))
+    # raise exception in case connecting to Twitter is impossible
+    except urllib.error.URLError:
+        print("ERROR: Cannot connect to Twitter at this time.")
+        sys.exit(1)
+    # unforseen exception
+    except Exception as err:
+        print("An unexpected error occurred on line {}:".format(
+            sys.exc_info()[-1].tb_lineno))
+        print("Exiting program.")
+        # print(err)
+        sys.exit(1)
+
 
 if __name__ == "__main__":
     main()
