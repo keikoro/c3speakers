@@ -249,12 +249,21 @@ def find_speakers(html_obj):
         # where 1234 is the speaker ID
         regex = ".+/speakers/([0-9]+)(\..*[.html])"
         href = item['href']
-        speaker_id = re.match(regex, href).group(1)
-        value = item.get_text()
-        # debug
-        # print("{} : {}".format(speaker_id, value))
-        # save all speaker IDs and speaker names into a dictionary
-        speakers[speaker_id] = value
+
+        # try to match speaker URL
+        try:
+            speaker_id = re.match(regex, href).group(1)
+            value = item.get_text()
+            # debug
+            # print("{} : {}".format(speaker_id, value))
+            # save all speaker IDs and speaker names into a dictionary
+            speakers[speaker_id] = value
+        # account for malformed speaker URLs
+        except Exception as err:
+            print("Faulty URL for speaker: {}".format(href))
+            print(err)
+            return None
+
 
     return speakers
 
@@ -278,11 +287,17 @@ def parse_speaker_profile(url):
         for twitter_account in soup.find_all('a', href=filter_links):
             # filter out twitter handles from all valid URLs
             # twitter handles are formatted http(s)://twitter.com/the_name
-            regex = ".+/twitter.com/([@_A-Za-z0-9]+)"
+            regex = ".*twitter.com/([@_A-Za-z0-9]+)"
             href = twitter_account['href']
-            twitter_handle = re.match(regex, href).group(1)
-
-            return twitter_handle
+            # try to find proper Twitter accounts
+            try:
+                twitter_handle = re.match(regex, href).group(1)
+                return twitter_handle
+            # account for malformed Twitter URLs
+            except Exception as err:
+                print("Faulty URL for Twitter account: {}".format(href))
+                print(err)
+                return None
 
 
 def db_connect(dir_path, db_name, table, year):
@@ -571,7 +586,6 @@ def main():
                 sys.exit(1)
 
     # debug
-    #
     print("{}: {}{} ... this year".format(year, c3_no, c3))
 
     # create base URL for Fahrplan page (which contains speaker page)
@@ -585,9 +599,6 @@ def main():
     else:
         for ending in file_endings:
             urls.append("{}speakers{}".format(speakers_base_url, ending))
-
-    # debug
-    # print(urls)
 
     # loop through possible URLs for speakers site until a match is found
     loop_filendings = 0
