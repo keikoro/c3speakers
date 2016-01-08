@@ -1,6 +1,28 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+"""
+Add Twitter handles of Chaos Communication Congress (C3) speakers
+to a Twitter list to follow their updates and conversations.
+
+Copyright (c) 2016 K Kollmann <code∆k.kollmann·moe>
+
+License: http://opensource.org/licenses/MIT The MIT License (MIT)
+
+The script is dependent on
+- c3speakers.py for obtaining Twitter handles
+- config.txt used for variables for file names and paths
+- twitterconfig.py used for user-provided Twitter credentials
+
+By default the program only works for the current year
+and uses Twitter handles found on the current year's Fahrplan's
+- https://events.ccc.de/congress/YYYY/Fahrplan/ –
+speakers' pages (where applicable).
+
+For more information about C3 see e.g.
+https://en.wikipedia.org/wiki/Chaos_Communication_Congress
+"""
+
 import configparser
 import os
 import sys
