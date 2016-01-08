@@ -522,8 +522,8 @@ def main():
 
     # define file for error logging
     # for future use
-    errlog_file = config.get('log', 'err_log')
-    err_log = open(dir_path + errlog_file, 'a')
+    # errlog_file = config.get('log', 'err_log')
+    # err_log = open(dir_path + errlog_file, 'a')
 
     # get congress data for current year (in any case)
     try:
