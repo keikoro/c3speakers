@@ -479,9 +479,6 @@ def compare_values(db_values, new_values):
                     # to avoid duplicate msgs for missing Twitter handles
                     # of speakers who were removed from Fahrplan
                     deleted[key] = value_db
-
-                    # if key not in removed:
-                    #     removed.append(key)
         return changed, deleted
     # NoneType on empty dictionaries
     except AttributeError:
@@ -520,6 +517,10 @@ def main():
     # use the current working directory to query DBs if no path was provided
     if not dir_path:
         dir_path = "{}/".format(os.getcwd())
+
+    # define file for error logging
+    errlog_file = config.get('log', 'err_log')
+    err_log = open(dir_path + errlog_file, 'a')
 
     # get congress data for current year (in any case)
     try:
