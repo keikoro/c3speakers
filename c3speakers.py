@@ -264,7 +264,6 @@ def find_speakers(html_obj):
             print(err)
             return None
 
-
     return speakers
 
 
@@ -519,6 +518,7 @@ def main():
         dir_path = "{}/".format(os.getcwd())
 
     # define file for error logging
+    # for future use
     errlog_file = config.get('log', 'err_log')
     err_log = open(dir_path + errlog_file, 'a')
 
@@ -638,6 +638,11 @@ def main():
     # variables for speakers/twitters before any inserts
     count_s_b4 = 0
     count_t_b4 = 0
+    db = None
+    db_speakers_b4 = None
+    db_speakers_after = None
+    db_twitter_before = None
+    db_twitter_after = None
 
     # total no. of speakers
     total_speakers = len(speakers)
@@ -665,7 +670,7 @@ def main():
                     sys.exc_info()[-1].tb_lineno))
                 print(err)
 
-           # try to update db with new values
+            # try to update db with new values
             try:
                 # fill table for speakers with IDs + name
                 db_write(dir_path, db, table, speakers=speakers)
@@ -678,7 +683,8 @@ def main():
 
             # get new speaker values from DB after write
             try:
-                db_speakers_after = db_query(dir_path, db, table, column='name')
+                db_speakers_after = db_query(dir_path, db, table,
+                                             column='name')
             # unforseen exception
             except Exception as err:
                 print("An unexpected error occurred on line {}:".format(
@@ -738,7 +744,8 @@ def main():
         # get current twitter values from DB
         # this query only makes sense if there are speakers to begin with
         try:
-            db_twitter_before = db_query(dir_path, db, table, column='twitter')
+            db_twitter_before = db_query(dir_path, db, table,
+                                         column='twitter')
         # unforseen exception
         except Exception as err:
             print("An unexpected error occurred on line {}:".format(
