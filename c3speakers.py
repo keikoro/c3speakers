@@ -632,17 +632,68 @@ def main():
             print(err)
             sys.exit(1)
 
-    print("---")
+    # print("---")
+
+    # variables for speakers/twitters before any inserts
+    count_s_b4 = 0
+    count_t_b4 = 0
 
     # total no. of speakers
     total_speakers = len(speakers)
     # start counting up speakers
     count_speakers = 1
+
+    # DB – SPEAKERS BLOCK
     if total_speakers > 0:
         # display no. of speakers found
         print("{} speaker(s) found".format(total_speakers))
         print("---")
 
+        # connect to the DB / create it if doesn't exist
+        try:
+            # connect to the DB / create it if doesn't exist
+            db = db_connect(dir_path, db_name, table, year)
+
+            # get current speaker values from DB
+            try:
+                # get speaker IDs + names
+                db_speakers_b4 = db_query(dir_path, db, table, column='name')
+            # unforseen exception
+            except Exception as err:
+                print("An unexpected error occurred on line {}:".format(
+                    sys.exc_info()[-1].tb_lineno))
+                print(err)
+
+           # try to update db with new values
+            try:
+                # fill table for speakers with IDs + name
+                db_write(dir_path, db, table, speakers=speakers)
+            # unforseen exception
+            except Exception as err:
+                print("An unexpected error occurred on line {}:".format(
+                    sys.exc_info()[-1].tb_lineno))
+                print(err)
+                sys.exit(1)
+
+            # get new speaker values from DB after write
+            try:
+                db_speakers_after = db_query(dir_path, db, table, column='name')
+            # unforseen exception
+            except Exception as err:
+                print("An unexpected error occurred on line {}:".format(
+                    sys.exc_info()[-1].tb_lineno))
+                print(err)
+                sys.exit(1)
+
+        # unforseen exception
+        except Exception as err:
+            print("An unexpected error occurred on line {}:".format(
+                sys.exc_info()[-1].tb_lineno))
+            print(err)
+            sys.exit(1)
+
+    # parse individual speaker pages
+    if total_speakers > 0:
         # parse all speakers' profiles
         for speaker_id, name in speakers.items():
             # display the how-many-th speaker is queried
@@ -663,119 +714,112 @@ def main():
         # not the same as twitter handles inserted!
         print("---")
         if twitters:
-            print("{} Twitter handle(s) found:".format(len(twitters)))
+            print("{} Twitter handle(s) detected:".format(len(twitters)))
             for speaker_id, twitter in twitters.items():
                 print("@{}\t".format(twitter), end='')
             print('')
         else:
             print("Found no Twitter handles in Fahrplan.")
-
     else:
         print("Found no speakers in Fahrplan.")
 
-    # database connection
-    try:
-        count_s_b4 = 0
-        count_t_b4 = 0
-        # connect to the DB / create it if doesn't exist
-        db = db_connect(dir_path, db_name, table, year)
+    # DB – TWITTER BLOCK
+    # DB – STATUS MESSAGES
 
-        print("---")
-        print("DB status: ", end='')
+    # start printing status messages now
+    print("---")
+    print("DB status: ", end='')
 
-        # get current speaker values from DB
-        db_speakers_b4 = db_query(dir_path, db, table, column='name')
-        if db_speakers_b4:
-            count_s_b4 = len(db_speakers_b4)
-            print("{} speaker(s) currently saved.".format(count_s_b4))
+    if db_speakers_b4:
+        count_s_b4 = len(db_speakers_b4)
+        print("{} speaker(s) currently saved.".format(count_s_b4))
 
-            # get current twitter values from DB
-            # this query only makes sense if there are speakers to begin with
-            db_twitter_before = db_query(dir_path, db, table,
-                                         column='twitter')
-            if db_twitter_before:
-                count_t_b4 = len(db_twitter_before)
-        else:
-            print("The database contains no speakers so far.")
-
-        # try to update db with new values
+        # get current twitter values from DB
+        # this query only makes sense if there are speakers to begin with
         try:
-            # fill table for speakers with IDs + name
-            db_write(dir_path, db, table, speakers=speakers)
-            # update table for speakers with twitter handles where applicable
-            db_write(dir_path, db, table, twitter=twitters)
-
-            # get new speaker values from DB after write
-            db_speakers_after = db_query(dir_path, db, table, column='name')
-
-            # if there are entries for speakers in the DB, get them
-            if db_speakers_after:
-                count_s_aft = len(db_speakers_after)
-                # print count if there are more DB entries now than before
-                if count_s_aft > count_s_b4:
-                    print("Updating...")
-                    print("DB status: {} speaker(s) now saved.".format(
-                        count_s_aft))
-
-                # compare values in DB with values obtained via request
-                s_changed, s_deleted = compare_values(db_speakers_after,
-                                                      speakers)
-
-                # get new twitter values from DB after write
-                db_twitter_after = db_query(dir_path, db, table,
-                                            column='twitter')
-
-                # if there are Twitter handles in the DB, get them
-                if db_twitter_after:
-                    count_t_aft = len(db_twitter_after)
-                    # print count if there are more Twitter handles now than before
-                    if (count_t_aft > count_t_b4) and (count_t_b4 != 0):
-                        print(
-                            "DB status: {} new Twitter handle(s) saved.".format(
-                                count_t_aft - count_t_b4))
-
-                # compare Twitter values currently in DB with new values
-                t_changed, t_deleted = compare_values(db_twitter_after,
-                                                      twitters)
-
-                if s_changed or s_deleted or t_changed or t_deleted:
-                    print("---")
-                    print("ATTENTION:")
-                    for key, value in s_deleted.items():
-                        print(
-                            u"\u2717 Speaker {} (id {}) is not listed in the Fahrplan anymore.".format(
-                                value, key))
-                    for key, value in s_changed.items():
-                        print(
-                            u"\u2717 Speaker {} (id {}) has changed to {} in the current Fahrplan.".format(
-                                db_speakers_after[key], key, value))
-                    for key, value in t_deleted.items():
-                        if key not in s_deleted:
-                            print(
-                                u"\u2717 Twitter @{} (id {}) is not listed in the Fahrplan anymore.".format(
-                                    value, key))
-                    for key, value in t_changed.items():
-                        print(
-                            u"\u2717 Twitter @{} (id {}) has changed to @{} in the current Fahrplan.".format(
-                                db_twitter_after[key], key, value))
-                    print(
-                        "You might want to look into these changes and fix them manually.")
-
+            db_twitter_before = db_query(dir_path, db, table, column='twitter')
         # unforseen exception
         except Exception as err:
             print("An unexpected error occurred on line {}:".format(
                 sys.exc_info()[-1].tb_lineno))
             print(err)
 
-    except TypeError as err:
-        print(err)
+        if db_twitter_before:
+            count_t_b4 = len(db_twitter_before)
+    else:
+        print("The database contains no speakers so far.")
+
+    # try to update db with new values
+    try:
+        # update table for speakers with twitter handles where applicable
+        db_write(dir_path, db, table, twitter=twitters)
+
+        # if there are entries for speakers in the DB after speakers write, get them
+        if db_speakers_after:
+            count_s_aft = len(db_speakers_after)
+            # update speakers count if there are more DB entries now than before
+            if count_s_aft > count_s_b4:
+                print("Updating...")
+                print("DB status: {} speaker(s) now saved.".format(
+                    count_s_aft))
+            else:
+                print("No new speakers retrieved.")
+
+            # compare values in DB with values obtained via request
+            s_changed, s_deleted = compare_values(db_speakers_after,
+                                                  speakers)
+
+            # get new twitter values from DB after write
+            try:
+                db_twitter_after = db_query(dir_path, db, table,
+                                            column='twitter')
+            # unforseen exception
+            except Exception as err:
+                print("An unexpected error occurred on line {}:".format(
+                    sys.exc_info()[-1].tb_lineno))
+                print(err)
+
+            # if there are Twitter handles in the DB, get them
+            if db_twitter_after:
+                count_t_aft = len(db_twitter_after)
+                # print count if there are more Twitter handles now than before
+                if (count_t_aft > count_t_b4) and (count_t_b4 != 0):
+                    print(
+                        "DB status: {} new Twitter handle(s) saved.".format(
+                            count_t_aft - count_t_b4))
+
+            # compare Twitter values currently in DB with new values
+            t_changed, t_deleted = compare_values(db_twitter_after,
+                                                  twitters)
+
+            if s_changed or s_deleted or t_changed or t_deleted:
+                print("---")
+                print("ATTENTION:")
+                for key, value in s_deleted.items():
+                    print(
+                        u"\u2717 Speaker {} (id {}) is not listed in the Fahrplan anymore.".format(
+                            value, key))
+                for key, value in s_changed.items():
+                    print(
+                        u"\u2717 Speaker {} (id {}) has changed to {} in the current Fahrplan.".format(
+                            db_speakers_after[key], key, value))
+                for key, value in t_deleted.items():
+                    if key not in s_deleted:
+                        print(
+                            u"\u2717 Twitter @{} (id {}) is not listed in the Fahrplan anymore.".format(
+                                value, key))
+                for key, value in t_changed.items():
+                    print(
+                        u"\u2717 Twitter @{} (id {}) has changed to @{} in the current Fahrplan.".format(
+                            db_twitter_after[key], key, value))
+                print(
+                    "You might want to look into these changes and fix them manually.")
 
     # unforseen exception
     except Exception as err:
         print("An unexpected error occurred on line {}:".format(
             sys.exc_info()[-1].tb_lineno))
         print(err)
-        sys.exit(1)
 
 
 if __name__ == "__main__":
