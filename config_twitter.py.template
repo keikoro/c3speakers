@@ -1,0 +1,10 @@
+# consumer key + secret
+ckey = "CONSUMERKEY"
+ckey_secret = "CONSUMERKEYSECRET"
+
+# access token + secret
+atoken = "ACCESSTOKEN"
+atoken_secret = "ACCESSTOKENSECRET"
+
+# Twitter handle of account owner
+username = "TWITTERUSERNAME"
