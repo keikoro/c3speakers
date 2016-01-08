@@ -8,8 +8,7 @@
 **egg-info
 **cache**
 
-
-**c3urls.py
-**twitterconfig*
+**config*
+!**config*template
 **.sqlite
-**.txt
+**.log
