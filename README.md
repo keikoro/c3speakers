@@ -78,7 +78,7 @@ The script is run by entering:
 
     $ python3 twittering.py
 
-Please note that currently, ```twittering.py``` only works for the current year (based on the assumption that equivalent Twitter lists for previous years have already been created).
+Note that currently, ```twittering.py``` only works for the current year and creates a list with the fixed name/slug ```CCC-XXC3-speakers``` (where ```XXC3``` is the congress shortcut) based on the assumption that equivalent Twitter lists for previous years have already been created.
 
 ## License
 
