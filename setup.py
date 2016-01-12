@@ -1,4 +1,15 @@
-from setuptools import setup
+import os
+from setuptools import setup, Command
+
+class cleanup(Command):
+    """Get rid of unneeded files after running setup.py."""
+    user_options = []
+    def initialize_options(self):
+        pass
+    def finalize_options(self):
+        pass
+    def run(self):
+        os.system("rm -rfv ./build ./dist ./*.pyc ./*.tgz ./*.egg-info")
 
 setup(
     name='c3speakers',
@@ -17,5 +28,9 @@ setup(
     ],
     keywords='Chaos Communicaton Congress, CCC, C3, speakers',
     install_requires=['beautifulsoup4', 'requests', 'twitter'],
-    tests_require=['pytest', 'requests']
+    tests_require=['pytest', 'requests'],
+
+    cmdclass = {
+        'clean': cleanup
+    }
 )
