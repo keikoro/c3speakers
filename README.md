@@ -19,14 +19,11 @@ into an SQLite database and to add all found Twitter handles to a Twitter list.
 
 To prepare your Python virtual environment for running the c3speakers scripts, run ```setup.py``` to download all necessary libraries from PyPI:
 
-<pre>
-$ python3 setup.py install
-</pre>
+    $ python3 setup.py install
 
 You can then remove some unneeded files introduced by the setup process, with:
-<pre>
-$ python3 setup.py clean
-</pre>
+
+    $ python3 setup.py clean
 
 Next, you might want to review the variables defined for default paths and names in `config.txt`, and possibly change them to suit your needs.
 
@@ -39,9 +36,7 @@ To use the Twitter-based script `twittering.py`, you will also need to create a 
 
 To find all C3 speakers for the current year – *if* a *Fahrplan* (schedule) has already been made publicly available –, run:<br>
 
-<pre>
-$ python3 c3speakers.py
-</pre>
+    $ python3 c3speakers.py
 
 This will query all speaker data on the speakers overview page of the official C3 Fahrplan (usually <a href="https://events.ccc.de/congress/YYYY/Fahrplan/speakers.html">https://events.ccc.de/congress/YYYY/Fahrplan/speakers.html</a>) and look for Twitter links on all individual speaker profiles.
 
@@ -52,40 +47,36 @@ Every found speaker's ID, name and Twitter handle (where applicable) will subseq
 ##### Help
 Run the script with the ```-h``` flag set to be shown all possible command line arguments:<br>
 
-<pre>
-$ python3 c3speakers.py -h
-</pre>
+    $ python3 c3speakers.py -h
 
 ##### Find speakers by year
 If you want to find all speakers for a particular year, you can specify that year by starting the script with the ```-y``` argument set:<br>
-<pre>
-$ python3 c3speakers.py -y 2010
-</pre>
+
+    $ python3 c3speakers.py -y 2010
+
 
 ##### Find speakers by congress shortcut
 You can also look up all speakers for a particular congress by providing its typical shortcut (e.g. 30C3 for the 30th CCC) with the ```-c``` option:<br>
-<pre>
-$ python3 c3speakers.py -c 28C3
-</pre>
+
+    $ python3 c3speakers.py -c 28C3
+
 
 ##### Use Fahrplan mirrors or local files
 To query a different website than the official Fahrplan page provided by Chaos Communication Club, or a local file, use ```-u``` and the URL or file path to ```speakers.html```:<br>
-<pre>
-$ python3 c3speakers.py -u /Users/JarJar/Desktop/CCC/2010/Fahrplan/speakers.html
-</pre>
+
+    $ python3 c3speakers.py -u /Users/JarJar/Desktop/CCC/2010/Fahrplan/speakers.html
+
 Note that currently, Fahrplan mirrors and local files need to contain the directory structure ```/YYYY/Fahrplan/``` or ```/XXC3/Fahrplan/``` and end in ```speakers(...).html``` to be accepted.
 
 ### Twitter script: twittering.py
 
-```twittering.py``` is a script with which you can add all speakers' Twitter accounts collected with ```c3speakers.py``` to a (private) Twitter list attached to your Twitter account.
+The file ```twittering.py``` is a script with which you can add all speakers' Twitter accounts collected with ```c3speakers.py``` to a (private) Twitter list attached to your Twitter account.
 
 Please refer to the **Setup** section above to make sure you have properly configured the variables the script depends on.
 
 The script is run by entering:
 
-<pre>
-$ python3 twittering.py
-</pre>
+    $ python3 twittering.py
 
 Please note that currently, ```twittering.py``` only works for the current year (based on the assumption that equivalent Twitter lists for previous years have already been created).
 
