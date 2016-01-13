@@ -34,7 +34,7 @@ To use the Twitter-based script `twittering.py`, you will also need to create a 
 
 ### Main script: c3speakers.py
 
-To find all C3 speakers for the current year – *if* a *Fahrplan* (schedule) has already been made publicly available –, run:<br>
+To find all C3 speakers for the current year – *if* a *Fahrplan* (schedule) has already been made publicly available –, run:
 
     $ python3 c3speakers.py
 
@@ -45,24 +45,24 @@ Every found speaker's ID, name and Twitter handle (where applicable) will subseq
 #### Options
 
 ##### Help
-Run the script with the ```-h``` flag set to be shown all possible command line arguments:<br>
+Run the script with the ```-h``` flag set to be shown all possible command line arguments:
 
     $ python3 c3speakers.py -h
 
 ##### Find speakers by year
-If you want to find all speakers for a particular year, you can specify that year by starting the script with the ```-y``` argument set:<br>
+If you want to find all speakers for a particular year, you can specify that year by starting the script with the ```-y``` argument set:
 
     $ python3 c3speakers.py -y 2010
 
 
 ##### Find speakers by congress shortcut
-You can also look up all speakers for a particular congress by providing its typical shortcut (e.g. 30C3 for the 30th CCC) with the ```-c``` option:<br>
+You can also look up all speakers for a particular congress by providing its typical shortcut (e.g. 30C3 for the 30th CCC) with the ```-c``` option:
 
     $ python3 c3speakers.py -c 28C3
 
 
 ##### Use Fahrplan mirrors or local files
-To query a different website than the official Fahrplan page provided by Chaos Communication Club, or a local file, use ```-u``` and the URL or file path to ```speakers.html```:<br>
+To query a different website than the official Fahrplan page provided by Chaos Communication Club, or a local file, use ```-u``` and the URL or file path to ```speakers.html```:
 
     $ python3 c3speakers.py -u /Users/JarJar/Desktop/CCC/2010/Fahrplan/speakers.html
 
