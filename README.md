@@ -38,9 +38,9 @@ To find all C3 speakers for the current year – *if* a *Fahrplan* (schedule) ha
 
     $ python3 c3speakers.py
 
-This will query all speaker data on the speakers overview page of the official C3 Fahrplan (usually <a href="https://events.ccc.de/congress/YYYY/Fahrplan/speakers.html">https://events.ccc.de/congress/YYYY/Fahrplan/speakers.html</a>) and look for Twitter links on all individual speaker profiles.
+This will query all speaker data on the speakers overview page of the official C3 Fahrplan (usually [https://events.ccc.de/congress/YYYY/Fahrplan/speakers.html"](https://events.ccc.de/congress/YYYY/Fahrplan/speakers.html)) and look for Twitter links on all individual speaker profiles.
 
-Every found speaker's ID, name and Twitter handle (where applicable) will subsequently be saved into an SQLite database for the queried congress. The default filename for the db is ```speakersYYYY.sqlite```, the default save location is the current working directory.
+Every found speaker's ID, name and Twitter handle (where applicable) will subsequently be saved into an SQLite database for the queried congress. The default filename for the db is ```speakersYYYY.sqlite``` (with ```YYYY``` signifying the congress's year), the default save location is the current working directory.
 
 #### Options
 
@@ -50,7 +50,7 @@ Run the script with the ```-h``` flag set to be shown all possible command line 
     $ python3 c3speakers.py -h
 
 ##### Find speakers by year
-If you want to find all speakers for a particular year, you can specify that year by starting the script with the ```-y``` argument set:
+If you want to find all speakers for a particular year, start the script with the ```-y``` argument set and provide the year:
 
     $ python3 c3speakers.py -y 2010
 
